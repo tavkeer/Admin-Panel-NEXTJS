@@ -7,6 +7,7 @@ import PopupForm from "./_components/popup_form"; // Popup form for adding artis
 import { db } from "@/js/firebase"; // Firestore configuration
 import { collection, getDocs, addDoc } from "firebase/firestore"; // Firestore methods
 
+
 // Type definition for an Artisan object
 type Artisan = {
   id: string;
@@ -17,7 +18,9 @@ type Artisan = {
 export default function Page() {
   const [artisans, setArtisans] = useState<Artisan[]>([]); // List of artisans
   const [showPopup, setShowPopup] = useState(false); // Toggle popup
+  const [alert, setAlert] = useState<{ type: "success" | "error"; title: string; description: string } | null>(null);
 
+  
   // Fetch artisans from Firestore
   const fetchArtisans = async () => {
     try {
@@ -44,11 +47,15 @@ export default function Page() {
       const artisanRef = collection(db, "artisans");
       const docRef = await addDoc(artisanRef, {
         ...formData,
-        created_at: new Date(), // Timestamp for creation
+        created_at: new Date(), 
       });
 
       console.log("Artisan added successfully:", { id: docRef.id, ...formData });
-      alert("Artisan added successfully!");
+      setAlert({
+        type: "success",
+        title: "Artisan Successfully Added",
+        description: `The artisan "${formData.name}" has been added.`,
+      });
 
       // Optimistically update artisan list
       setArtisans((prev) => [...prev, { id: docRef.id, name: formData.name, image: formData.image }]);
@@ -56,7 +63,11 @@ export default function Page() {
       setShowPopup(false); // Close the popup
     } catch (error) {
       console.error("Error adding artisan:", error);
-      alert("Failed to add artisan. Please try again.");
+      setAlert({
+        type: "error",
+        title: "Failed to Add Artisan",
+        description: `There was an error adding the artisan. Please try again.`,
+      });
     }
   };
 
@@ -75,7 +86,7 @@ export default function Page() {
       {/* Floating Button */}
       <div className="fixed bottom-8 right-8 z-50">
         <button
-          className="flex items-center justify-center p-4 bg-blue-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+          className="flex items-center justify-center p-4 bg-blue-400 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
           onClick={() => setShowPopup(true)}
         >
           <FiPlus size={24} />
