@@ -194,7 +194,9 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
         </button>
 
         {/* Step Indication */}
-        <h2 className="text-2xl font-semibold mb-6">{step === 1 ? "Add Product Details" : "Add Combinations"}</h2>
+        <h2 className="text-2xl font-semibold mb-6">
+          {step === 1 ? "Add Product Details" : "Add Combinations"}
+        </h2>
 
         {/* Step 1: Product Details */}
         {step === 1 && (
@@ -219,6 +221,7 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
               required
               className="mt-4"
             />
+
             {/* Images */}
             <div className="mt-4">
               <label className="text-body-sm font-medium text-dark">
@@ -228,7 +231,7 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
                 <div key={index} className="flex items-center gap-2 my-2">
                   <InputGroup
                     placeholder="Enter image link"
-                    label="Enter image link"
+                    label=""
                     type="text"
                     name={`image-${index}`}
                     value={image}
@@ -248,7 +251,8 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
                 onClick={addImageField}
               />
             </div>
-            {/* Artisan Selection */}
+
+            {/* Artisan Dropdown */}
             <div className="mt-4">
               <label className="text-body-sm font-medium text-dark">
                 Artisan <span className="ml-1 select-none text-red">*</span>
@@ -280,6 +284,65 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
                 </p>
               )}
             </div>
+
+            {/* Colors */}
+            <div className="mt-4">
+              <label className="text-body-sm font-medium text-dark">
+                Colors <span className="ml-1 select-none text-red">*</span>
+              </label>
+              {formData.colors.map((color, index) => (
+                <div key={index} className="flex items-center gap-2 my-2">
+                  <InputGroup  label=""
+                    placeholder="Enter color"
+                    type="text"
+                    name={`color-${index}`}
+                    value={color}
+                    handleChange={(e) => handleColorChange(e.target.value, index)}
+                    required
+                  />
+                  <FiTrash
+                    className="cursor-pointer text-red-500 hover:text-red-700"
+                    size={20}
+                    onClick={() => removeColorField(index)}
+                  />
+                </div>
+              ))}
+              <FiPlusCircle
+                className="mt-2 cursor-pointer text-blue-500 hover:text-blue-600"
+                size={24}
+                onClick={addColorField}
+              />
+            </div>
+
+            {/* Sizes */}
+            <div className="mt-4">
+              <label className="text-body-sm font-medium text-dark">
+                Sizes <span className="ml-1 select-none text-red">*</span>
+              </label>
+              {formData.sizes.map((size, index) => (
+                <div key={index} className="flex items-center gap-2 my-2">
+                  <InputGroup
+                    placeholder="Enter size"
+                    type="text"  label=""
+                    name={`size-${index}`}
+                    value={size}
+                    handleChange={(e) => handleSizeChange(e.target.value, index)}
+                    required
+                  />
+                  <FiTrash
+                    className="cursor-pointer text-red-500 hover:text-red-700"
+                    size={20}
+                    onClick={() => removeSizeField(index)}
+                  />
+                </div>
+              ))}
+              <FiPlusCircle
+                className="mt-2 cursor-pointer text-blue-500 hover:text-blue-600"
+                size={24}
+                onClick={addSizeField}
+              />
+            </div>
+
             {/* Description */}
             <div className="mt-4">
               <label className="text-body-sm font-medium text-dark">
@@ -301,34 +364,46 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
           </form>
         )}
 
-        {/* Step 2 */}
+        {/* Step 2: Add Combinations */}
         {step === 2 && (
           <form onSubmit={handleSubmit}>
             <h3 className="text-xl font-semibold mb-4">Define Combinations</h3>
             {formData.combinations.map((combination, index) => (
               <div key={index} className="flex flex-wrap gap-4 mb-4">
-                <InputGroup
-                  label="Color"
-                  placeholder="Enter color"
-                  type="text"
-                  name={`combination-color-${index}`}
-                  value={combination.color}
-                  handleChange={(e) =>
-                    handleCombinationChange(e.target.value, index, "color")
-                  }
-                  required
-                />
-                <InputGroup
-                  label="Size"
-                  placeholder="Enter size"
-                  type="text"
-                  name={`combination-size-${index}`}
-                  value={combination.size}
-                  handleChange={(e) =>
-                    handleCombinationChange(e.target.value, index, "size")
-                  }
-                  required
-                />
+                <div className="w-1/2">
+                  <label className="text-sm font-medium text-gray-600">Color</label>
+                  <select
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ring-blue-500"
+                    value={combination.color}
+                    onChange={(e) =>
+                      handleCombinationChange(e.target.value, index, "color")
+                    }
+                  >
+                    <option value="">Select Color</option>
+                    {formData.colors.map((color, i) => (
+                      <option key={i} value={color}>
+                        {color}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="w-1/2">
+                  <label className="text-sm font-medium text-gray-600">Size</label>
+                  <select
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ring-blue-500"
+                    value={combination.size}
+                    onChange={(e) =>
+                      handleCombinationChange(e.target.value, index, "size")
+                    }
+                  >
+                    <option value="">Select Size</option>
+                    {formData.sizes.map((size, i) => (
+                      <option key={i} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <InputGroup
                   label="Price"
                   placeholder="Enter price"
@@ -339,41 +414,41 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
                     handleCombinationChange(e.target.value, index, "price")
                   }
                   required
+                  />
+                  <InputGroup
+                    label="Quantity"
+                    placeholder="Enter quantity"
+                    type="text"
+                    name={`combination-quantity-${index}`}
+                    value={combination.quantity}
+                    handleChange={(e) =>
+                      handleCombinationChange(e.target.value, index, "quantity")
+                    }
+                    required
+                  />
+                  <FiTrash
+                    className="cursor-pointer text-red-500 hover:text-red-700"
+                    size={20}
+                    onClick={() => removeCombination(index)}
+                  />
+                </div>
+                ))}
+                <FiPlusCircle
+                  className="mt-2 cursor-pointer text-blue-500 hover:text-blue-600"
+                  size={24}
+                  onClick={addCombination}
                 />
-                <InputGroup
-                  label="Quantity"
-                  placeholder="Enter quantity"
-                  type="text"
-                  name={`combination-quantity-${index}`}
-                  value={combination.quantity}
-                  handleChange={(e) =>
-                    handleCombinationChange(e.target.value, index, "quantity")
-                  }
-                  required
-                />
-                <FiTrash
-                  className="cursor-pointer text-red-500 hover:text-red-700"
-                  size={20}
-                  onClick={() => removeCombination(index)}
-                />
-              </div>
-            ))}
-            <FiPlusCircle
-              className="mt-2 cursor-pointer text-blue-500 hover:text-blue-600"
-              size={24}
-              onClick={addCombination}
-            />
-            <button
-              type="submit"
-              className="mt-6 bg-blue-500 text-white px-4 py-2 rounded-lg w-full"
-            >
-              Submit
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default ProductsForm;
+                <button
+                  type="submit"
+                  className="mt-6 bg-blue-500 text-white px-4 py-2 rounded-lg w-full"
+                >
+                  Submit
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      );
+    };
+    
+    export default ProductsForm;
