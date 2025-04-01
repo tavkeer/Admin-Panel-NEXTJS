@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import Quill from "quill"; // Directly import quill instance
-import "quill/dist/quill.snow.css"; // Snow theme for Quill editor
+import Quill from "quill";
+import "quill/dist/quill.snow.css"; 
 
 type CustomEditorProps = {
   value: string;
@@ -10,11 +10,11 @@ type CustomEditorProps = {
 };
 
 const CustomEditor: React.FC<CustomEditorProps> = ({ value, onChange }) => {
-  const editorRef = useRef<HTMLDivElement>(null); // Reference for editor element
-  const quillRef = useRef<Quill | null>(null); // Store the Quill instance
+  const editorRef = useRef<HTMLDivElement>(null);
+  const quillRef = useRef<Quill | null>(null); 
 
   useEffect(() => {
-    if (!editorRef.current || quillRef.current) return; // Prevent reinitialization
+    if (!editorRef.current || quillRef.current) return; 
 
     quillRef.current = new Quill(editorRef.current, {
       theme: "snow",
@@ -29,10 +29,10 @@ const CustomEditor: React.FC<CustomEditorProps> = ({ value, onChange }) => {
       },
     });
 
-    // Set initial value
+
     quillRef.current.root.innerHTML = value;
 
-    // Listen for text changes
+
     quillRef.current.on("text-change", () => {
       if (quillRef.current) {
         onChange(quillRef.current.root.innerHTML);
@@ -40,7 +40,7 @@ const CustomEditor: React.FC<CustomEditorProps> = ({ value, onChange }) => {
     });
   }, []);
 
-  // Sync external value changes
+
   useEffect(() => {
     if (quillRef.current && quillRef.current.root.innerHTML !== value) {
       quillRef.current.root.innerHTML = value;

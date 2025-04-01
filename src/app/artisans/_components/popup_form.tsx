@@ -1,6 +1,7 @@
 "use client";
-import React, { useState, useEffect } from "react";
+
 import InputGroup from "@/components/FormElements/InputGroup";
+import React, { useState, useEffect } from "react";
 import CustomEditor from "./custom_editor";
 
 type FormDataType = {
@@ -26,10 +27,10 @@ const PopupForm: React.FC<PopupFormProps> = ({ onClose, onSubmit, initialData = 
     story: "",
   });
 
-  // Check if we are in edit mode
+
   const isEditMode = !!initialData;
 
-  // Populate form with initial data when component mounts or initialData changes
+
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);

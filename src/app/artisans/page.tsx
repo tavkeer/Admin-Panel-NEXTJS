@@ -19,6 +19,7 @@ export default function Page() {
   const [showPopup, setShowPopup] = useState(false);
   const [artisans, setArtisans] = useState<Artisan[]>([]);
   const [selectedArtisan, setSelectedArtisan] = useState<Artisan | null>(null);
+  
   const [alert, setAlert] = useState<{ type: "success" | "error"; title: string; description: string } | null>(null);
 
   const fetchArtisans = async () => {
