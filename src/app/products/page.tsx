@@ -29,7 +29,7 @@ type FormDataType = {
   enabled: boolean;
   price: string;
   colors: string[];
-  sizes: string[];
+  sizes: string[];//
   combinations: { color: string; size: string; price: string; quantity: string }[];
 };
 
