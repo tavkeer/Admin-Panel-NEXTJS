@@ -22,6 +22,8 @@ type FormDataType = {
   name: string;
   thumbnail_image: string;
   images: string[];
+  category_id: string, // Initialize category_id
+  category_name: string, // Initialize category_name
   artisan_id: string;
   artisan_name: string;
   created_at: Date;
@@ -58,6 +60,8 @@ export default function ProductsPage() {
       description: "", // Initialize empty if not provided
       enabled: product.enabled,
       price: product.price,
+      category_id: '', // Initialize category_id
+      category_name: '', // Initialize category_name
       colors: [], // Initialize empty since raw Product doesn't include colors
       sizes: [], // Initialize empty since raw Product doesn't include sizes
       combinations: [], // Initialize empty since raw Product doesn't include combinations
