@@ -28,6 +28,18 @@ export const NAV_DATA = [
         icon: Icons.Table,
         items: [],
       },
+      {
+        title: "Categories",
+        url: "/categories",
+        icon: Icons.Alphabet,
+        items: [],
+      },
+      {
+        title: "Generes",
+        url: "/generes",
+        icon: Icons.Alphabet,
+        items: [],
+      },
       // {
       //   title: "Forms",
       //   icon: Icons.Alphabet,
