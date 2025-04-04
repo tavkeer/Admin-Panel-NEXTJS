@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import InputGroup from "@/components/FormElements/InputGroup";
-import CustomEditor from "@/app/artisans/_components/custom_editor";
 import { FiTrash, FiPlusCircle } from "react-icons/fi";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/js/firebase";
+import QuillEditorWrapper from "@/app/artisans/_components/custom_editor_wrapper";
 
 type FormDataType = {
   id: string;
@@ -20,7 +20,12 @@ type FormDataType = {
   price: string;
   colors: string[];
   sizes: string[];
-  combinations: { color: string; size: string; price: string; quantity: string }[];
+  combinations: {
+    color: string;
+    size: string;
+    price: string;
+    quantity: string;
+  }[];
 };
 
 type Artisan = {
@@ -153,7 +158,7 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
   const handleCombinationChange = (
     value: string,
     index: number,
-    field: keyof FormDataType["combinations"][0]
+    field: keyof FormDataType["combinations"][0],
   ) => {
     const newCombinations = [...formData.combinations];
     newCombinations[index][field] = value;
@@ -163,7 +168,10 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
   const addCombination = () => {
     setFormData({
       ...formData,
-      combinations: [...formData.combinations, { color: "", size: "", price: "", quantity: "" }],
+      combinations: [
+        ...formData.combinations,
+        { color: "", size: "", price: "", quantity: "" },
+      ],
     });
   };
 
@@ -183,18 +191,18 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 overflow-auto">
-      <div className="bg-white max-w-[90vh] w-full mx-auto p-6 rounded-xl shadow-lg overflow-y-auto max-h-[90vh] relative z-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-auto bg-black bg-opacity-70">
+      <div className="relative z-50 mx-auto max-h-[90vh] w-full max-w-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-lg">
         {/* Close Button */}
         <button
-          className="absolute top-4 right-4 text-gray-600 hover:text-gray-800"
+          className="absolute right-4 top-4 text-gray-600 hover:text-gray-800"
           onClick={onClose}
         >
           &#x2715;
         </button>
 
         {/* Step Indication */}
-        <h2 className="text-2xl font-semibold mb-6">
+        <h2 className="mb-6 text-2xl font-semibold">
           {step === 1 ? "Add Product Details" : "Add Combinations"}
         </h2>
 
@@ -228,14 +236,16 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
                 Images <span className="ml-1 select-none text-red">*</span>
               </label>
               {formData.images.map((image, index) => (
-                <div key={index} className="flex items-center gap-2 my-2">
+                <div key={index} className="my-2 flex items-center gap-2">
                   <InputGroup
                     placeholder="Enter image link"
                     label=""
                     type="text"
                     name={`image-${index}`}
                     value={image}
-                    handleChange={(e) => handleImageChange(e.target.value, index)}
+                    handleChange={(e) =>
+                      handleImageChange(e.target.value, index)
+                    }
                     required
                   />
                   <FiTrash
@@ -258,10 +268,12 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
                 Artisan <span className="ml-1 select-none text-red">*</span>
               </label>
               <select
-                className="mt-2 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ring-blue-500"
+                className="mt-2 w-full rounded-lg border px-4 py-2 ring-blue-500 focus:outline-none focus:ring-2"
                 value={formData.artisan_id}
                 onChange={(e) => {
-                  const selectedArtisan = artisans.find((a) => a.id === e.target.value);
+                  const selectedArtisan = artisans.find(
+                    (a) => a.id === e.target.value,
+                  );
                   if (selectedArtisan) {
                     setFormData({
                       ...formData,
@@ -291,13 +303,16 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
                 Colors <span className="ml-1 select-none text-red">*</span>
               </label>
               {formData.colors.map((color, index) => (
-                <div key={index} className="flex items-center gap-2 my-2">
-                  <InputGroup  label=""
+                <div key={index} className="my-2 flex items-center gap-2">
+                  <InputGroup
+                    label=""
                     placeholder="Enter color"
                     type="text"
                     name={`color-${index}`}
                     value={color}
-                    handleChange={(e) => handleColorChange(e.target.value, index)}
+                    handleChange={(e) =>
+                      handleColorChange(e.target.value, index)
+                    }
                     required
                   />
                   <FiTrash
@@ -320,13 +335,16 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
                 Sizes <span className="ml-1 select-none text-red">*</span>
               </label>
               {formData.sizes.map((size, index) => (
-                <div key={index} className="flex items-center gap-2 my-2">
+                <div key={index} className="my-2 flex items-center gap-2">
                   <InputGroup
                     placeholder="Enter size"
-                    type="text"  label=""
+                    type="text"
+                    label=""
                     name={`size-${index}`}
                     value={size}
-                    handleChange={(e) => handleSizeChange(e.target.value, index)}
+                    handleChange={(e) =>
+                      handleSizeChange(e.target.value, index)
+                    }
                     required
                   />
                   <FiTrash
@@ -348,7 +366,7 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
               <label className="text-body-sm font-medium text-dark">
                 Description <span className="ml-1 select-none text-red">*</span>
               </label>
-              <CustomEditor
+              <QuillEditorWrapper
                 value={formData.description}
                 onChange={handleStoryChange}
               />
@@ -357,7 +375,7 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
             {/* Submit Button */}
             <button
               type="submit"
-              className="mt-6 bg-blue-500 text-white px-4 py-2 rounded-lg w-full"
+              className="mt-6 w-full rounded-lg bg-blue-500 px-4 py-2 text-white"
             >
               Next
             </button>
@@ -367,13 +385,15 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
         {/* Step 2: Add Combinations */}
         {step === 2 && (
           <form onSubmit={handleSubmit}>
-            <h3 className="text-xl font-semibold mb-4">Define Combinations</h3>
+            <h3 className="mb-4 text-xl font-semibold">Define Combinations</h3>
             {formData.combinations.map((combination, index) => (
-              <div key={index} className="flex flex-wrap gap-4 mb-4">
+              <div key={index} className="mb-4 flex flex-wrap gap-4">
                 <div className="w-1/2">
-                  <label className="text-sm font-medium text-gray-600">Color</label>
+                  <label className="text-sm font-medium text-gray-600">
+                    Color
+                  </label>
                   <select
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ring-blue-500"
+                    className="w-full rounded-lg border px-4 py-2 ring-blue-500 focus:outline-none focus:ring-2"
                     value={combination.color}
                     onChange={(e) =>
                       handleCombinationChange(e.target.value, index, "color")
@@ -388,9 +408,11 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
                   </select>
                 </div>
                 <div className="w-1/2">
-                  <label className="text-sm font-medium text-gray-600">Size</label>
+                  <label className="text-sm font-medium text-gray-600">
+                    Size
+                  </label>
                   <select
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ring-blue-500"
+                    className="w-full rounded-lg border px-4 py-2 ring-blue-500 focus:outline-none focus:ring-2"
                     value={combination.size}
                     onChange={(e) =>
                       handleCombinationChange(e.target.value, index, "size")
@@ -414,41 +436,41 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
                     handleCombinationChange(e.target.value, index, "price")
                   }
                   required
-                  />
-                  <InputGroup
-                    label="Quantity"
-                    placeholder="Enter quantity"
-                    type="text"
-                    name={`combination-quantity-${index}`}
-                    value={combination.quantity}
-                    handleChange={(e) =>
-                      handleCombinationChange(e.target.value, index, "quantity")
-                    }
-                    required
-                  />
-                  <FiTrash
-                    className="cursor-pointer text-red-500 hover:text-red-700"
-                    size={20}
-                    onClick={() => removeCombination(index)}
-                  />
-                </div>
-                ))}
-                <FiPlusCircle
-                  className="mt-2 cursor-pointer text-blue-500 hover:text-blue-600"
-                  size={24}
-                  onClick={addCombination}
                 />
-                <button
-                  type="submit"
-                  className="mt-6 bg-blue-500 text-white px-4 py-2 rounded-lg w-full"
-                >
-                  Submit
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      );
-    };
-    
-    export default ProductsForm;
+                <InputGroup
+                  label="Quantity"
+                  placeholder="Enter quantity"
+                  type="text"
+                  name={`combination-quantity-${index}`}
+                  value={combination.quantity}
+                  handleChange={(e) =>
+                    handleCombinationChange(e.target.value, index, "quantity")
+                  }
+                  required
+                />
+                <FiTrash
+                  className="cursor-pointer text-red-500 hover:text-red-700"
+                  size={20}
+                  onClick={() => removeCombination(index)}
+                />
+              </div>
+            ))}
+            <FiPlusCircle
+              className="mt-2 cursor-pointer text-blue-500 hover:text-blue-600"
+              size={24}
+              onClick={addCombination}
+            />
+            <button
+              type="submit"
+              className="mt-6 w-full rounded-lg bg-blue-500 px-4 py-2 text-white"
+            >
+              Submit
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ProductsForm;

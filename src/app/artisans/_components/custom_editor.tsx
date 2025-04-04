@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import Quill from "quill";
-import "quill/dist/quill.snow.css"; 
+import "quill/dist/quill.snow.css";
 
 type CustomEditorProps = {
   value: string;
@@ -11,10 +11,13 @@ type CustomEditorProps = {
 
 const CustomEditor: React.FC<CustomEditorProps> = ({ value, onChange }) => {
   const editorRef = useRef<HTMLDivElement>(null);
-  const quillRef = useRef<Quill | null>(null); 
+  const quillRef = useRef<Quill | null>(null);
 
   useEffect(() => {
-    if (!editorRef.current || quillRef.current) return; 
+    if (!editorRef.current || quillRef.current) return;
+
+    // Safety check for client-side only
+    if (typeof window === "undefined") return;
 
     quillRef.current = new Quill(editorRef.current, {
       theme: "snow",
@@ -29,9 +32,7 @@ const CustomEditor: React.FC<CustomEditorProps> = ({ value, onChange }) => {
       },
     });
 
-
     quillRef.current.root.innerHTML = value;
-
 
     quillRef.current.on("text-change", () => {
       if (quillRef.current) {
@@ -40,14 +41,18 @@ const CustomEditor: React.FC<CustomEditorProps> = ({ value, onChange }) => {
     });
   }, []);
 
-
   useEffect(() => {
     if (quillRef.current && quillRef.current.root.innerHTML !== value) {
       quillRef.current.root.innerHTML = value;
     }
   }, [value]);
 
-  return <div ref={editorRef} style={{ height: "150px", backgroundColor: "#fff" }}></div>;
+  return (
+    <div
+      ref={editorRef}
+      style={{ height: "150px", backgroundColor: "#fff" }}
+    ></div>
+  );
 };
 
 export default CustomEditor;
