@@ -29,14 +29,21 @@ type FormDataType = {
   enabled: boolean;
   price: string;
   colors: string[];
-  sizes: string[];//
-  combinations: { color: string; size: string; price: string; quantity: string }[];
+  sizes: string[]; //
+  combinations: {
+    color: string;
+    size: string;
+    price: string;
+    quantity: string;
+  }[];
 };
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [showPopup, setShowPopup] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<FormDataType | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<FormDataType | null>(
+    null,
+  );
 
   /** Utility: Convert Product to FormDataType **/
   const convertToFormDataType = (product: Product): FormDataType => {
@@ -64,7 +71,6 @@ export default function ProductsPage() {
       const snapshot = await getDocs(productsRef);
 
       const productsData = snapshot.docs.map((doc) => ({
-
         ...(doc.data() as Product),
       }));
       setProducts(productsData);
@@ -76,7 +82,10 @@ export default function ProductsPage() {
   /** Save product combinations as a subcollection **/
   const saveCombinations = async (productId: string, combinations: any[]) => {
     try {
-      const combinationsRef = collection(db, `products/${productId}/combinations`);
+      const combinationsRef = collection(
+        db,
+        `products/${productId}/combinations`,
+      );
       // Add each combination into the subcollection
       for (const combination of combinations) {
         const combinationDoc = doc(combinationsRef); // Generate a new document
@@ -107,7 +116,9 @@ export default function ProductsPage() {
           created_at: new Date(),
         });
         productId = productRef.id;
-        console.log(`Product "${productData.name}" added successfully with ID: ${productId}`);
+        console.log(
+          `Product "${productData.name}" added successfully with ID: ${productId}`,
+        );
       }
 
       // Save combinations as a subcollection
@@ -132,10 +143,10 @@ export default function ProductsPage() {
       <Breadcrumb pageName="Products" />
 
       {/* Product Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 mt-6">
-        {products.map((product) => (
+      <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4">
+        {products.map((product, index) => (
           <ProductTile
-            key={product.id}
+            key={index}
             product={product}
             onClick={() => setSelectedProduct(convertToFormDataType(product))}
           />
@@ -145,7 +156,7 @@ export default function ProductsPage() {
       {/* Floating Button */}
       <div className="fixed bottom-8 right-8 z-50">
         <button
-          className="flex items-center justify-center p-4 bg-blue-400 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+          className="flex items-center justify-center rounded-full bg-blue-400 p-4 text-white shadow-lg transition-all duration-300 hover:shadow-xl"
           onClick={() => {
             setShowPopup(true);
             setSelectedProduct(null); // Reset selected product
@@ -168,26 +179,31 @@ export default function ProductsPage() {
 }
 
 /** Small Product Card **/
-const ProductTile = ({ product, onClick }: { product: Product; onClick: () => void }) => {
+const ProductTile = ({
+  product,
+  onClick,
+}: {
+  product: Product;
+  onClick: () => void;
+}) => {
   const { name, thumbnail_image } = product;
 
   return (
     <div
-      className="group relative overflow-hidden rounded-xl shadow-lg transform transition-transform duration-300 hover:scale-105 hover:shadow-2xl 
-      backdrop-blur-md cursor-pointer"
+      className="group relative transform cursor-pointer overflow-hidden rounded-xl shadow-lg backdrop-blur-md transition-transform duration-300 hover:scale-105 hover:shadow-2xl"
       onClick={onClick}
     >
       <img
         src={thumbnail_image}
         alt={name}
-        className="h-40 w-full object-cover rounded-xl"
+        className="h-40 w-full rounded-xl object-cover"
         onError={(e) => {
           e.currentTarget.src = "https://via.placeholder.com/300?text=No+Image";
         }}
       />
       {/* Product Name Overlay */}
-      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 text-white text-lg font-semibold px-2">
-        <span className="truncate w-full text-center">{name}</span>
+      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 px-2 text-lg font-semibold text-white">
+        <span className="w-full truncate text-center">{name}</span>
       </div>
     </div>
   );
