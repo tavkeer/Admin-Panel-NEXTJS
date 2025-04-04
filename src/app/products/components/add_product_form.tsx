@@ -18,6 +18,8 @@ type FormDataType = {
   description: string;
   enabled: boolean;
   price: string;
+  category_id: string, // Initialize category_id
+  category_name: string, // Initialize category_name
   colors: string[];
   sizes: string[];
   combinations: {
@@ -29,6 +31,11 @@ type FormDataType = {
 };
 
 type Artisan = {
+  id: string;
+  name: string;
+};
+
+type Category = {
   id: string;
   name: string;
 };
@@ -53,6 +60,8 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
     artisan_id: "",
     artisan_name: "",
     created_at: new Date(),
+    category_id: "", // Initialize category_id
+    category_name: "", // Initialize category_name
     description: "",
     enabled: true,
     price: "",
@@ -63,6 +72,8 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
 
   const [step, setStep] = useState(1); // Track the current form step
   const [artisans, setArtisans] = useState<Artisan[]>([]); // List of artisans
+  const [categories, setCategories] = useState<Category[]>([]); // List of categories
+
 
   /** Fetch Artisans from Firestore **/
   useEffect(() => {
@@ -82,6 +93,25 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
 
     fetchArtisans();
   }, []);
+
+    /** Fetch Categories from Firestore **/
+    useEffect(() => {
+      const fetchCategories = async () => {
+        try {
+          const categoriesRef = collection(db, "categories");
+          const snapshot = await getDocs(categoriesRef);
+          const categoriesData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            name: doc.data().category_name, // Adjust field name if necessary
+          }));
+          setCategories(categoriesData);
+        } catch (error) {
+          console.error("Error fetching categories:", error);
+        }
+      };
+  
+      fetchCategories();
+    }, []);
 
   /** Preload Initial Data **/
   useEffect(() => {
@@ -179,6 +209,8 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
     const newCombinations = formData.combinations.filter((_, i) => i !== index);
     setFormData({ ...formData, combinations: newCombinations });
   };
+
+
 
   /** Handle Form Submission **/
   const handleSubmit = (e: React.FormEvent) => {
@@ -295,6 +327,41 @@ const ProductsForm: React.FC<ProductsFormProps> = ({
                   Selected Artisan: {formData.artisan_name}
                 </p>
               )}
+
+ {/* Category Dropdown */}
+ <div className="mt-4">
+        <label className="text-body-sm font-medium text-dark">
+          Category <span className="ml-1 select-none text-red">*</span>
+        </label>
+        <select
+          className="mt-2 w-full rounded-lg border px-4 py-2 ring-blue-500 focus:outline-none focus:ring-2"
+          value={formData.category_id}
+          onChange={(e) => {
+            const selectedCategory = categories.find(
+              (a) => a.id === e.target.value,
+            );
+            if (selectedCategory) {
+              setFormData({
+                ...formData,
+                category_id: selectedCategory.id,
+                category_name: selectedCategory.name,
+              });
+            }
+          }}
+        >
+          <option value="">Select Category</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+        {formData.category_name && (
+          <p className="mt-2 font-medium text-gray-600">
+            Selected Category: {formData.category_name}
+          </p>
+        )}
+      </div>
             </div>
 
             {/* Colors */}
