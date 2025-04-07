@@ -50,7 +50,7 @@ const CustomEditor: React.FC<CustomEditorProps> = ({ value, onChange }) => {
   return (
     <div
       ref={editorRef}
-      style={{ height: "150px", backgroundColor: "#fff" }}
+      style={{ height: "300px", backgroundColor: "#fff" }}
     ></div>
   );
 };

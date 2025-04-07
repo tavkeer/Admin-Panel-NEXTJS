@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import InputGroup from "@/components/FormElements/InputGroup";
-import { FiTrash, FiPlusCircle } from "react-icons/fi";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/js/firebase";
 import QuillEditorWrapper from "@/app/artisans/_components/custom_editor_wrapper";
+import InputGroup from "@/components/FormElements/InputGroup";
+import { collection, getDocs } from "firebase/firestore";
+import { FiTrash, FiPlusCircle } from "react-icons/fi";
+import React, { useState, useEffect } from "react";
+import { db } from "@/js/firebase";
 
 type FormDataType = {
   id: string;
@@ -18,8 +18,8 @@ type FormDataType = {
   description: string;
   enabled: boolean;
   price: string;
-  category_id: string, // Initialize category_id
-  category_name: string, // Initialize category_name
+  category_id: string,
+  category_name: string,
   colors: string[];
   sizes: string[];
   combinations: {

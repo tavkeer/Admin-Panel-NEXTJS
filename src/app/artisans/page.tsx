@@ -1,146 +1,123 @@
 "use client";
-import { collection, getDocs, addDoc, doc, updateDoc, getDoc } from "firebase/firestore";
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import React, { useState, useEffect } from "react";
-import PopupForm from "./_components/popup_form";
-import { FiPlus } from "react-icons/fi";
-import { db } from "@/js/firebase";
 
-type Artisan = {
-  id: string;
-  name: string;
-  image: string;
-  address?: string;
-  phone?: string;
-  story?: string;
-};
+import { db } from "@/js/firebase";
+import { useRouter } from "next/navigation"; 
+import React, { useState, useEffect } from "react";
+import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import { FiPlus, FiEdit, FiTrash2, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import {
+  collection,
+  doc,
+  deleteDoc,
+  query,
+  orderBy,
+  limit,
+  startAfter,
+  getDocs,
+  DocumentData,
+  QueryDocumentSnapshot,
+} from "firebase/firestore";
+
 
 export default function Page() {
-  const [showPopup, setShowPopup] = useState(false);
-  const [artisans, setArtisans] = useState<Artisan[]>([]);
-  const [selectedArtisan, setSelectedArtisan] = useState<Artisan | null>(null);
-  
-  const [alert, setAlert] = useState<{ type: "success" | "error"; title: string; description: string } | null>(null);
+  const ITEMS_PER_PAGE = 5;
+  const router = useRouter();
 
-  const fetchArtisans = async () => {
-    try {
-      const artisansRef = collection(db, "artisans");
-      const snapshot = await getDocs(artisansRef);
-      const artisansData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Artisan[];
-      setArtisans(artisansData); // Update artisan list
-    } catch (error) {
-      console.error("Failed to fetch artisans:", error);
-    }
-  };
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(
+    null
+  );
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [pageArtisans, setPageArtisans] = useState<Artisan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [alert, setAlert] = useState<{
+    type: "success" | "error";
+    title: string;
+    description: string;
+  } | null>(null);
 
   useEffect(() => {
-    fetchArtisans(); // Fetch artisans on component mount
-  }, []);
+    const fetchTotalPages = async () => {
+      const artisansRef = collection(db, "artisans");
+      const snapshot = await getDocs(query(artisansRef, orderBy("created_at", "desc")));
+      const totalArtisans = snapshot.size;
+      setTotalPages(Math.ceil(totalArtisans / ITEMS_PER_PAGE));
+      return snapshot;
+    };
 
-  const fetchArtisanDetails = async (artisanId: string) => {
+    const fetchPageData = async () => {
+      setLoading(true);
+      try {
+        const artisansRef = collection(db, "artisans");
+        const baseQuery = query(artisansRef, orderBy("created_at", "desc"), limit(ITEMS_PER_PAGE));
+
+        const currentQuery =
+          currentPage === 1
+            ? baseQuery
+            : query(baseQuery, startAfter(lastVisible), limit(ITEMS_PER_PAGE));
+
+        const snapshot = await getDocs(currentQuery);
+        const artisans: Artisan[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Artisan[];
+
+        if (!snapshot.empty) {
+          setFirstVisible(snapshot.docs[0]);
+          setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+        }
+        setPageArtisans(artisans);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching page data:", err);
+        setLoading(false);
+      }
+    };
+
+    fetchTotalPages();
+    fetchPageData();
+  }, [currentPage]);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
+
+  const handleDeleteArtisan = async (artisanId: string) => {
     try {
       const artisanRef = doc(db, "artisans", artisanId);
-      const artisanSnap = await getDoc(artisanRef);
-      
-      if (artisanSnap.exists()) {
-        return { id: artisanSnap.id, ...artisanSnap.data() } as Artisan;
-      } else {
-        console.error("No such artisan!");
-        return null;
-      }
-    } catch (error) {
-      console.error("Error getting artisan:", error);
-      return null;
-    }
-  };
+      await deleteDoc(artisanRef);
 
-  const handleArtisanClick = async (artisan: Artisan) => {
-    // Fetch complete artisan details including address, phone, story, etc.
-    const fullArtisanData = await fetchArtisanDetails(artisan.id);
-    if (fullArtisanData) {
-      setSelectedArtisan(fullArtisanData);
-      setShowPopup(true);
-    }
-  };
-
-  const handleAddArtisan = async (formData: any) => {
-    try {
-      const artisanRef = collection(db, "artisans");
-      const docRef = await addDoc(artisanRef, {
-        ...formData,
-        created_at: new Date(),
-      });
-      console.log("Artisan added successfully:", { id: docRef.id, ...formData });
+      setPageArtisans((prevArtisans) => prevArtisans.filter((artisan) => artisan.id !== artisanId));
       setAlert({
         type: "success",
-        title: "Artisan Successfully Added",
-        description: `The artisan "${formData.name}" has been added.`,
+        title: "Artisan Deleted Successfully",
+        description: "The artisan has been removed from the database.",
       });
-      setArtisans((prev) => [...prev, { id: docRef.id, name: formData.name, image: formData.image }]);
-      setShowPopup(false);
     } catch (error) {
-      console.error("Error adding artisan:", error);
+      console.error("Error deleting artisan:", error);
       setAlert({
         type: "error",
-        title: "Failed to Add Artisan",
-        description: `There was an error adding the artisan. Please try again.`,
+        title: "Failed to Delete Artisan",
+        description: "An error occurred while deleting the artisan.",
       });
     }
   };
 
-  const handleUpdateArtisan = async (formData: any) => {
-    if (!selectedArtisan) return;
-    
-    try {
-      const artisanRef = doc(db, "artisans", selectedArtisan.id);
-      await updateDoc(artisanRef, {
-        ...formData,
-        updated_at: new Date(),
-      });
-      
-      console.log("Artisan updated successfully:", { id: selectedArtisan.id, ...formData });
-      
-      setAlert({
-        type: "success",
-        title: "Artisan Successfully Updated",
-        description: `The artisan "${formData.name}" has been updated.`,
-      });
-      
-      // Update artisan in local state
-      setArtisans((prev) => 
-        prev.map((artisan) => 
-          artisan.id === selectedArtisan.id 
-            ? { ...artisan, name: formData.name, image: formData.image } 
-            : artisan
-        )
-      );
-      
-      setShowPopup(false);
-      setSelectedArtisan(null);
-    } catch (error) {
-      console.error("Error updating artisan:", error);
-      setAlert({
-        type: "error",
-        title: "Failed to Update Artisan",
-        description: `There was an error updating the artisan. Please try again.`,
-      });
-    }
+  const goToCreatePage = () => {
+    router.push("/artisans/create_artisan"); 
   };
 
-  const handleSubmit = (formData: any) => {
-    if (selectedArtisan) {
-      handleUpdateArtisan(formData);
-    } else {
-      handleAddArtisan(formData);
-    }
-  };
-
-  const closePopup = () => {
-    setShowPopup(false);
-    setSelectedArtisan(null);
+  const goToEditPage = (id: string) => {
+    router.push(`/artisans/create_artisan?id=${id}`); 
   };
 
   return (
@@ -150,68 +127,109 @@ export default function Page() {
 
       {/* Alert */}
       {alert && (
-        <div className={`p-4 mb-4 rounded-lg ${alert.type === "success" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+        <div
+          className={`p-4 mb-4 rounded-lg ${
+            alert.type === "success" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+          }`}
+        >
           <h3 className="font-medium">{alert.title}</h3>
           <p>{alert.description}</p>
         </div>
       )}
 
-      {/* Artisan Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 mt-6">
-        {artisans.map((artisan) => (
-          <ArtisanTile 
-            key={artisan.id} 
-            artisan={artisan} 
-            onClick={() => handleArtisanClick(artisan)}
-          />
-        ))}
+      {/* Artisans Table */}
+      <div className="overflow-x-auto mt-6">
+        {loading ? (
+          <p>Loading artisans...</p>
+        ) : pageArtisans.length === 0 ? (
+          <p>No artisans found.</p>
+        ) : (
+          <table className="table-auto w-full border-collapse border border-gray-300 rounded-lg overflow-hidden shadow">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="px-4 py-2 text-left">Image</th>
+                <th className="px-4 py-2 text-left">Name</th>
+                <th className="px-4 py-2 text-left">Address</th>
+                <th className="px-4 py-2 text-left">Phone</th>
+                <th className="px-4 py-2 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageArtisans.map((artisan) => (
+                <tr key={artisan.id} className="hover:bg-gray-50 border-b border-gray-200">
+                  <td className="px-4 py-2">
+                    <img
+                      src={artisan.image}
+                      alt={artisan.name}
+                      className="h-20 w-20 object-cover rounded-md"
+                    />
+                  </td>
+                  <td className="px-4 py-2">{artisan.name}</td>
+                  <td className="px-4 py-2">{artisan.address || "N/A"}</td>
+                  <td className="px-4 py-2">{artisan.phone || "N/A"}</td>
+                  <td className="px-4 py-2">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                        onClick={() => goToEditPage(artisan.id)}
+                      >
+                        <FiEdit />
+                      </button>
+                      <button
+                        className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                        onClick={() => handleDeleteArtisan(artisan.id)}
+                      >
+                        <FiTrash2 />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Pagination Buttons */}
+      <div className="flex items-center justify-between mt-6">
+        <button
+          className={`p-2 rounded-md flex items-center ${
+            currentPage === 1
+              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+          }`}
+          onClick={handlePrevPage}
+          disabled={currentPage === 1}
+        >
+          <FiChevronLeft />
+          Previous
+        </button>
+        <div className="text-sm text-gray-500">
+          Page {currentPage} of {totalPages}
+        </div>
+        <button
+          className={`p-2 rounded-md flex items-center ${
+            currentPage === totalPages
+              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+          }`}
+          onClick={handleNextPage}
+          disabled={currentPage === totalPages}
+        >
+          Next
+          <FiChevronRight />
+        </button>
       </div>
 
       {/* Floating Button */}
       <div className="fixed bottom-8 right-8 z-50">
         <button
           className="flex items-center justify-center p-4 bg-blue-400 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
-          onClick={() => setShowPopup(true)}
+          onClick={goToCreatePage}
         >
           <FiPlus size={24} />
         </button>
       </div>
-
-   {/* Popup Form */}
-{showPopup && (
-  <PopupForm
-    onClose={closePopup}
-    onSubmit={handleSubmit}
-    initialData={selectedArtisan ? {
-      name: selectedArtisan.name || "",
-      image: selectedArtisan.image || "",
-      address: selectedArtisan.address || "",
-      phone: selectedArtisan.phone || "",
-      story: selectedArtisan.story || ""
-    } : null}
-  />
-)}
     </div>
   );
 }
-
-const ArtisanTile = ({ artisan, onClick }: { artisan: Artisan; onClick: () => void }) => {
-  const { name, image } = artisan;
-  return (
-    <div 
-      className="group relative overflow-hidden rounded-xl shadow-lg transform transition-transform duration-300 hover:scale-105 hover:shadow-2xl backdrop-blur-md cursor-pointer"
-      onClick={onClick}
-    >
-      {/* Thumbnail Image */}
-      <img
-        src={image}
-        alt={name}
-        className="h-40 w-full object-cover rounded-xl"
-      />
-      {/* Name overlay */}
-      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 text-white text-lg font-semibold px-2">
-        <span className="truncate w-full text-center">{name}</span>
-      </div>
-    </div>
-  );
-};
