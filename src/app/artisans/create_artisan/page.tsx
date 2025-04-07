@@ -1,10 +1,10 @@
 "use client";
 
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import InputGroup from "@/components/FormElements/InputGroup";
-import React, { useState, useEffect } from "react";
-import QuillEditorWrapper from "../_components/custom_editor_wrapper";
-import { useRouter, useSearchParams } from "next/navigation"; // For navigation and query params
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import QuillEditorWrapper from "../_components/custom_editor_wrapper";
 import { db } from "@/js/firebase";
 import { doc, getDoc, updateDoc, addDoc, collection } from "firebase/firestore";
 
@@ -16,10 +16,10 @@ type FormDataType = {
   story: string;
 };
 
-export default function CreateArtisanPage() {
+const CreateArtisanPage = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const artisanId = searchParams.get("id");
+  const searchParams = useSearchParams(); // Extract query params
+  const artisanId = searchParams?.get("id"); // Check if 'id' exists in query
 
   const [formData, setFormData] = useState<FormDataType>({
     name: "",
@@ -28,11 +28,12 @@ export default function CreateArtisanPage() {
     phone: "",
     story: "",
   });
+
   const [loading, setLoading] = useState(false);
-  const isEditMode = !!artisanId; // Check if we're in edit mode
+  const isEditMode = !!artisanId; // Determine if we're editing an artisan
 
   useEffect(() => {
-    // Fetch data for editing
+    // Fetch artisan data if we're in edit mode
     const fetchArtisanData = async () => {
       if (artisanId) {
         try {
@@ -41,10 +42,10 @@ export default function CreateArtisanPage() {
 
           if (artisanSnap.exists()) {
             const data = artisanSnap.data() as FormDataType;
-            setFormData(data); // Load initial data into the form
+            setFormData(data); // Load artisan data into the form
           } else {
             console.error("Artisan not found");
-            router.push("/artisans"); // Redirect if artisan doesn't exist
+            router.push("/artisans"); // Redirect if artisan not found
           }
         } catch (error) {
           console.error("Error fetching artisan:", error);
@@ -68,7 +69,7 @@ export default function CreateArtisanPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate phone number to ensure it's a 10-digit number
+    // Validate phone number format
     if (!/^\d{10}$/.test(formData.phone)) {
       alert("Phone number must be a valid 10-digit number.");
       return;
@@ -78,15 +79,15 @@ export default function CreateArtisanPage() {
       setLoading(true);
 
       if (isEditMode) {
-        // Update logic
-        const artisanRef = doc(db, "artisans", artisanId!); 
+        // Update existing artisan
+        const artisanRef = doc(db, "artisans", artisanId!); // Non-null assertion
         await updateDoc(artisanRef, {
           ...formData,
           updated_at: new Date(),
         });
         alert("Artisan updated successfully.");
       } else {
-        // Add new artisan logic
+        // Create new artisan
         const artisansRef = collection(db, "artisans");
         await addDoc(artisansRef, {
           ...formData,
@@ -95,7 +96,7 @@ export default function CreateArtisanPage() {
         alert("Artisan added successfully.");
       }
 
-      router.push("/artisans"); // Navigate back to the artisans list page
+      router.push("/artisans"); // Navigate back to artisans list
     } catch (error) {
       console.error("Error submitting artisan:", error);
       alert("An error occurred while saving the artisan.");
@@ -109,7 +110,11 @@ export default function CreateArtisanPage() {
       {/* Breadcrumb */}
       <Breadcrumb pageName={isEditMode ? "Update Artisan" : "Create Artisan"} />
 
-    
+      {/* Form Header */}
+      <h2 className="text-2xl font-bold text-center mb-6">
+        {isEditMode ? "Update Artisan" : "Add New Artisan"}
+      </h2>
+
       {/* Form */}
       <form onSubmit={handleSubmit}>
         <InputGroup
@@ -155,7 +160,7 @@ export default function CreateArtisanPage() {
           className="mt-4"
         />
 
-        {/* Story Section */}
+        {/* Story */}
         <div className="mt-4">
           <label className="text-body-sm font-medium text-dark">
             Story <span className="ml-1 select-none text-red">*</span>
@@ -191,5 +196,13 @@ export default function CreateArtisanPage() {
         </button>
       </form>
     </div>
+  );
+};
+
+export default function ArtisanFormWithSuspense() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <CreateArtisanPage />
+    </Suspense>
   );
 }
