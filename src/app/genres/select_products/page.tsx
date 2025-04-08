@@ -5,7 +5,7 @@ import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { collection, query, getDocs, orderBy, limit, startAfter, endBefore, updateDoc, doc, getDoc } from "firebase/firestore";
 import { db } from "@/js/firebase";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiChevronLeft, FiChevronRight, FiSearch } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiSearch, FiEdit, FiTrash2 } from "react-icons/fi";
 
 type Product = {
   id: string;
@@ -61,8 +61,6 @@ export default function SelectProductsPage() {
 
   // Fetch products with pagination and search
   const fetchProducts = async (direction?: "next" | "prev") => {
-
-    console.log(selectedProducts.length);
     setLoading(true);
     try {
       const productsRef = collection(db, "products");
@@ -143,93 +141,127 @@ export default function SelectProductsPage() {
     return selectedProducts.includes(productId);
   };
 
+  // These functions are placeholders for edit and delete actions
+  const handleEdit = (productId: string) => {
+    // Placeholder for edit functionality
+    console.log("Edit product:", productId);
+  };
+
+  const handleDelete = (productId: string) => {
+    // Placeholder for delete functionality
+    console.log("Delete product:", productId);
+  };
+
   return (
-    <div className="w-full min-h-screen bg-white p-6">
-      <Breadcrumb pageName={genreName||'N/A'} />
-
-      <div className="mt-4 flex items-center gap-2">
-        <FiSearch size={20} className="text-gray-600" />
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            fetchProducts(); // Trigger search on change
-          }}
-          className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+    <div className="w-full min-h-screen  p-6">
+      <div className="mb-8">
+        <Breadcrumb pageName={`Products for ${genreName || 'Genre'}`} />
       </div>
 
-      <div className="mt-6 overflow-x-auto">
-        {loading ? (
-          <p>Loading products...</p>
-        ) : error ? (
-          <p className="text-red-500">{error}</p>
-        ) : products.length === 0 ? (
-          <p>No products found.</p>
-        ) : (
-          <table className="w-full table-auto rounded-lg border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="px-4 py-2 text-left">Image</th>
-                <th className="px-4 py-2 text-left">Name</th>
-                <th className="px-4 py-2 text-left">Select</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="px-4 py-2">
-                    <img
-                      src={product.thumbnail_image}
-                      alt={product.name}
-                      className="h-16 w-16 rounded-md object-cover"
-                    />
-                  </td>
-                  <td className="px-4 py-2">{product.name}</td>
-                  <td className="px-4 py-2">
-                    <input
-                      type="checkbox"
-                      checked={isProductSelected(product.id)}
-                      onChange={() => handleProductToggle(product.id)}
-                      className="cursor-pointer"
-                    />
-                  </td>
+      <div className="mb-6 rounded-lg bg-white p-4 shadow-md">
+        <div className="flex items-center gap-2 border border-gray-200 rounded-md p-2">
+          <FiSearch size={20} className="text-gray-600" />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              fetchProducts(); // Trigger search on change
+            }}
+            className="w-full focus:outline-none"
+          />
+        </div>
+
+        <div className="mt-6 overflow-x-auto">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          ) : error ? (
+            <div className="bg-red-100 p-4 rounded-md text-red-700">{error}</div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No products found.</div>
+          ) : (
+            <table className="w-full table-auto">
+              <thead>
+                <tr className="bg-gray-50 border-b">
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">Image</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">Name</th>
+                  <th className="px-4 py-3 text-center font-medium text-gray-600">Select</th>
+                  {/* <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th> */}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {products.map((product) => (
+                  <tr key={product.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <img
+                        src={product.thumbnail_image}
+                        alt={product.name}
+                        className="h-16 w-16 rounded-md object-cover"
+                      />
+                    </td>
+                    <td className="px-4 py-3">{product.name}</td>
+                    <td className="px-4 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isProductSelected(product.id)}
+                        onChange={() => handleProductToggle(product.id)}
+                        className="h-4 w-4 cursor-pointer"
+                      />
+                    </td>
+                    {/* <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleEdit(product.id)}
+                          className="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition-colors"
+                        >
+                          <FiEdit size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition-colors"
+                        >
+                          <FiTrash2 size={16} />
+                        </button>
+                      </div>
+                    </td> */}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
 
-      <div className="mt-6 flex items-center justify-between">
-        <button
-          className="flex items-center gap-2 rounded-md bg-gray-400 px-4 py-2 text-white hover:bg-gray-500 disabled:opacity-50"
-          onClick={handlePrevPage}
-          disabled={currentPage === 1 || loading}
-        >
-          <FiChevronLeft size={20} /> Previous
-        </button>
-        <span>Page {currentPage}</span>
-        <button
-          className="flex items-center gap-2 rounded-md bg-gray-400 px-4 py-2 text-white hover:bg-gray-500 disabled:opacity-50"
-          onClick={handleNextPage}
-          disabled={products.length < ITEMS_PER_PAGE || loading}
-        >
-          Next <FiChevronRight size={20} />
-        </button>
+        <div className="mt-6 flex items-center justify-between">
+          <button
+            className="flex items-center gap-2 rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 disabled:opacity-50 transition-colors"
+            onClick={handlePrevPage}
+            disabled={currentPage === 1 || loading}
+          >
+            <FiChevronLeft size={16} /> Previous
+          </button>
+          <span className="text-gray-600">Page {currentPage}</span>
+          <button
+            className="flex items-center gap-2 rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 disabled:opacity-50 transition-colors"
+            onClick={handleNextPage}
+            disabled={products.length < ITEMS_PER_PAGE || loading}
+          >
+            Next <FiChevronRight size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="mt-6 flex justify-between">
         <button
-          className="rounded-md bg-gray-400 px-4 py-2 text-white hover:bg-gray-500"
+          className="rounded-md bg-gray-200 px-6 py-2 text-gray-700 hover:bg-gray-300 transition-colors"
           onClick={() => router.push("/genres")}
         >
           Cancel
         </button>
         <button
-          className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          className="rounded-md bg-blue-500 px-6 py-2 text-white hover:bg-blue-600 transition-colors"
           onClick={handleSave}
         >
           Save
