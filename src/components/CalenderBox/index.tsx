@@ -13,22 +13,34 @@ type Admin = {
 };
 
 export function AdminsList() {
-  const [admins, setAdmins] = useState<Admin[]>([]);
-  const [alert, setAlert] = useState<{ variant: "success" | "error"; title: string; description?: string } | null>(null);
+  const [admins, setAdmins] = useState<Admin[]>([]); // State to store admins data
+  const [alert, setAlert] = useState<{
+    variant: "success" | "error";
+    title: string;
+    description?: string;
+  } | null>(null);
 
   // Fetch data from Firestore for the 'admins' collection
   useEffect(() => {
     async function fetchAdmins() {
-      const adminsCollection = collection(db, "admins");
-      const snapshot = await getDocs(adminsCollection);
+      try {
+        const adminsCollection = collection(db, "admins");
+        const snapshot = await getDocs(adminsCollection);
 
-      const adminsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Admin[];
+        const adminsData = snapshot.docs.map((doc) => ({
+          ...(doc.data() as Admin), // Explicitly cast `doc.data()` to Admin
+        }));
 
-      console.log("Fetched Admins:", adminsData);
-      setAdmins(adminsData);
+        console.log("Fetched Admins:", adminsData);
+        setAdmins(adminsData); // Update state with fetched admins
+      } catch (error) {
+        console.error("Error fetching admins:", error);
+        setAlert({
+          variant: "error",
+          title: "Failed to Fetch Admins",
+          description: "An unexpected error occurred while loading admins.",
+        });
+      }
     }
 
     fetchAdmins();
@@ -36,6 +48,7 @@ export function AdminsList() {
 
   // Function to delete an admin
   const deleteAdmin = async (id: string) => {
+    // Prevent deletion if it's the last admin
     if (admins.length === 1) {
       setAlert({
         variant: "error",
@@ -66,7 +79,7 @@ export function AdminsList() {
       setAlert({
         variant: "error",
         title: "Failed to Delete Admin",
-        description:  "An unexpected error occurred.",
+        description: "An unexpected error occurred.",
       });
     }
   };
@@ -83,6 +96,8 @@ export function AdminsList() {
       )}
 
       <h1 className="text-2xl font-bold mb-4">Admins List</h1>
+
+      {/* Dynamically render Admin Cards */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {admins.map((admin) => (
           <AdminCard key={admin.id} admin={admin} deleteAdmin={deleteAdmin} />
@@ -113,7 +128,7 @@ function AdminCard({
       <FiTrash2
         className="text-red-500 hover:text-red-600 cursor-pointer"
         size={24}
-        onClick={() => deleteAdmin(id)}
+        onClick={() => deleteAdmin(id)} // Pass the admin's ID to the deletion function
         title="Delete Admin"
       />
     </div>
@@ -136,7 +151,9 @@ const Alert = ({
     : "bg-red-100 border-red-400 text-red-700";
 
   return (
-    <div className={`fixed top-4 right-4 border px-4 py-3 rounded shadow-lg ${colorClasses}`}>
+    <div
+      className={`fixed top-4 right-4 border px-4 py-3 rounded shadow-lg ${colorClasses}`}
+    >
       <strong>{title}</strong>
       {description && <p className="text-sm mt-1">{description}</p>}
     </div>

@@ -36,7 +36,7 @@ export const NAV_DATA = [
       },
       {
         title: "Genres",
-        url: "/generes",
+        url: "/genres",
         icon: Icons.PieChart,
         items: [],
       },
