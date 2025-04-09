@@ -1,140 +1,371 @@
 "use client";
-import React, { useState } from "react";
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import PopupForm from "./_components/popup_form"; // Same as PopupForm for Artisans
-import { FiPlus } from "react-icons/fi";
-import { collection, addDoc } from "firebase/firestore";
-import { useCollection } from "react-firebase-hooks/firestore";
+import React, { useState, useEffect } from "react";
+import {
+  FiEdit,
+  FiTrash2,
+  FiChevronLeft,
+  FiChevronRight,
+  FiPlus,
+} from "react-icons/fi";
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  startAfter,
+  doc,
+  deleteDoc,
+  addDoc,
+  updateDoc,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
 import { db } from "@/js/firebase";
-import { FiAlertTriangle } from "react-icons/fi"; // Error icon from react-icons
+import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import Alert from "@/components/Alert/Alert";
+import PopupForm from "./_components/popup_form";
+import ConfirmationDialog from "@/components/ConfirmationDialog/ConfirmationDialog";
 
 type Category = {
   id: string;
-  name: string; // Represents the 'category_name' field
-  image?: string; // Represents the 'category_image' field
+  name: string;
 };
 
 export default function CategoriesPage() {
-  const [showPopup, setShowPopup] = useState(false); // Controls the popup display
-  const [alert, setAlert] = useState<{ type: "success" | "error"; title: string; description: string } | null>(null);
+  const ITEMS_PER_PAGE = 8;
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageKeys, setPageKeys] = useState<any[]>([null]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null,
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  // Using React Firebase Hooks to fetch categories from Firestore
-  const [snapshot, loading, error] = useCollection(collection(db, "categories"));
+  // Fetch total pages for pagination
+  useEffect(() => {
+    const fetchTotal = async () => {
+      const snapshot = await getDocs(collection(db, "categories"));
+      setTotalPages(Math.ceil(snapshot.size / ITEMS_PER_PAGE));
+    };
 
-  // Handle adding a new category
-  const handleAddCategory = async (formData: Partial<Category>) => {
+    if (!searchTerm) {
+      fetchTotal();
+    }
+  }, [categories.length, searchTerm]);
+
+  // Fetch categories
+  const fetchCategories = async () => {
+    setIsLoading(true);
+
     try {
-      const categoryRef = collection(db, "categories");
-      const docRef = await addDoc(categoryRef, {
-        category_name: formData.name, // Namespaced Firestore naming
-        category_image: formData.image || "", // Optional image
-        created_at: new Date(),
-      });
-      console.log("Category added successfully:", { id: docRef.id, ...formData });
-      setAlert({
-        type: "success",
-        title: "Category Successfully Added",
-        description: `The category "${formData.name}" has been added.`,
-      });
-      setShowPopup(false); // Hide popup after success
-    } catch (error) {
-      console.error("Error adding category:", error);
-      setAlert({
-        type: "error",
-        title: "Failed to Add Category",
-        description: "There was an error adding the category. Please try again.",
-      });
+      let q;
+
+      if (searchTerm.trim()) {
+        q = query(
+          collection(db, "categories"),
+          orderBy("created_at", "desc"),
+          limit(100),
+        );
+      } else if (currentPage > 1 && pageKeys[currentPage - 1]) {
+        q = query(
+          collection(db, "categories"),
+          orderBy("created_at", "desc"),
+          startAfter(pageKeys[currentPage - 1]),
+          limit(ITEMS_PER_PAGE),
+        );
+      } else {
+        q = query(
+          collection(db, "categories"),
+          orderBy("created_at", "desc"),
+          limit(ITEMS_PER_PAGE),
+        );
+      }
+
+      const snapshot = await getDocs(q);
+      let results = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        name: doc.data().category_name || "",
+      }));
+
+      if (searchTerm.trim()) {
+        const lower = searchTerm.toLowerCase();
+        results = results.filter((cat) =>
+          cat.name.toLowerCase().includes(lower),
+        );
+      }
+
+      setCategories(results);
+
+      // Pagination logic
+      if (!searchTerm && !snapshot.empty) {
+        const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+        setPageKeys((prev) => {
+          const updated = [...prev];
+          updated[currentPage] = lastDoc;
+          return updated;
+        });
+      }
+    } catch (err: any) {
+      setError("Failed to fetch categories.");
+    }
+
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, [currentPage, searchTerm]);
+
+  const doesCategoryExist = async (name: string) => {
+    const snapshot = await getDocs(query(collection(db, "categories")));
+
+    const lower = name.trim().toLowerCase();
+    return snapshot.docs.some((doc) => {
+      const existingName = (doc.data().category_name || "").toLowerCase();
+      return existingName === lower;
+    });
+  };
+
+  // Handle Delete
+  const handleDeleteCategory = async (id: string) => {
+    setPendingDeleteId(id);
+    setShowConfirmDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+
+    try {
+      await deleteDoc(doc(db, "categories", pendingDeleteId));
+      setSuccess("Category deleted.");
+      setCategories((prev) => prev.filter((c) => c.id !== pendingDeleteId));
+    } catch (err) {
+      setError("Error deleting category.");
+    } finally {
+      setPendingDeleteId(null);
+      setShowConfirmDialog(false);
     }
   };
 
+  // Edit Mode
+  const handleEditCategory = (category: Category) => {
+    setSelectedCategory(category);
+    setShowPopup(true);
+  };
+
   const closePopup = () => {
-    setShowPopup(false); // Close popup
+    setShowPopup(false);
+    setSelectedCategory(null);
+  };
+
+  // Add / Update Category
+  const handleSubmitCategory = async (formData: Partial<Category>) => {
+    const name = formData.name?.trim();
+    if (!name) {
+      setError("Category name cannot be empty.");
+      return;
+    }
+
+    try {
+      const nameExists = await doesCategoryExist(name);
+
+      // Check for duplicate BEFORE proceeding
+      const isSameName =
+        selectedCategory &&
+        selectedCategory.name.toLowerCase() === name.toLowerCase();
+
+      const isDuplicate =
+        (!selectedCategory && nameExists) ||
+        (selectedCategory && !isSameName && nameExists);
+
+      if (isDuplicate) {
+        closePopup();
+
+        // Let the dialog close cleanly before showing the error
+        setTimeout(() => {
+          setError("Category with this name already exists.");
+        }, 200);
+
+        return;
+      }
+
+      if (selectedCategory) {
+        await updateDoc(doc(db, "categories", selectedCategory.id), {
+          category_name: name,
+        });
+
+        setCategories((prev) =>
+          prev.map((cat) =>
+            cat.id === selectedCategory.id ? { ...cat, name } : cat,
+          ),
+        );
+
+        setSuccess("Category updated.");
+      } else {
+        const newDoc = await addDoc(collection(db, "categories"), {
+          category_name: name,
+          created_at: Timestamp.now(),
+        });
+
+        if (!searchTerm && currentPage === 1) {
+          setCategories((prev) => [
+            { id: newDoc.id, name },
+            ...prev.slice(0, ITEMS_PER_PAGE - 1),
+          ]);
+        }
+
+        setSuccess("Category added.");
+      }
+
+      closePopup();
+    } catch (err) {
+      console.error(err);
+      closePopup();
+      setTimeout(() => {
+        setError("Error saving category.");
+      }, 200);
+    }
+  };
+
+  // Search with debounce
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
   };
 
   return (
-    <div className="mx-auto w-full max-w-[970px]">
-      {/* Breadcrumb */}
+    <div className="mx-auto flex min-h-[95vh] w-full flex-col">
       <Breadcrumb pageName="Categories" />
 
-      {/* Alert */}
-      {alert && (
-        <div className={`p-4 mb-4 rounded-lg ${alert.type === "success" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-          <h3 className="font-medium">{alert.title}</h3>
-          <p>{alert.description}</p>
-        </div>
-      )}
+      <Alert message={success} setMessage={setSuccess} type="success" />
+      <Alert message={error} setMessage={setError} type="error" />
 
-      {/* Category Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 mt-6">
-        {loading ? (
-          <p>Loading categories...</p>
-        ) : error ? (
-          <p>Error loading categories...</p>
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search categories..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          className="w-full rounded-md border border-gray-300 p-2"
+        />
+      </div>
+
+      <div className="mt-2 flex flex-grow flex-col overflow-x-auto">
+        {isLoading ? (
+          <p className="flex flex-grow items-center justify-center">
+            Loading categories...
+          </p>
+        ) : categories.length === 0 ? (
+          <p className="flex flex-grow items-center justify-center">
+            No categories found.
+          </p>
         ) : (
-          snapshot?.docs.map((doc) => {
-            const category = {
-              id: doc.id,
-              name: doc.data().category_name,
-              image: doc.data().category_image,
-            } as Category;
-
-            return <CategoryTile key={category.id} category={category} />;
-          })
+          <div className="flex h-full flex-col">
+            <table className="w-full table-auto border-collapse overflow-hidden rounded-lg border border-gray-300 bg-white shadow">
+              <thead>
+                <tr className="bg-gray-50 text-gray-700">
+                  <th className="px-4 py-2 text-left">Category Name</th>
+                  <th className="px-4 py-2 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categories.map((category) => (
+                  <tr
+                    key={category.id}
+                    className="border-b border-gray-200 transition-colors hover:bg-gray-100"
+                  >
+                    <td className="px-4 py-2">{category.name}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          className="rounded-md bg-blue-500 p-2 text-white hover:bg-blue-600"
+                          onClick={() => handleEditCategory(category)}
+                        >
+                          <FiEdit />
+                        </button>
+                        <button
+                          className="rounded-md bg-red-500 p-2 text-white hover:bg-red-600"
+                          onClick={() => handleDeleteCategory(category.id)}
+                        >
+                          <FiTrash2 />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="flex-grow" />
+          </div>
         )}
       </div>
 
-      {/* Floating Button */}
+      {!searchTerm && categories.length > 0 && (
+        <div className="mt-auto flex items-center justify-around py-6">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className={`flex items-center rounded-md p-2 ${
+              currentPage === 1
+                ? "cursor-not-allowed bg-gray-200 text-gray-400"
+                : "bg-blue-500 text-white hover:bg-blue-600"
+            }`}
+          >
+            <FiChevronLeft />
+            <span className="ml-1">Previous</span>
+          </button>
+          <div className="text-sm text-gray-500">
+            Page {currentPage} of {totalPages}
+          </div>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className={`flex items-center rounded-md p-2 ${
+              currentPage === totalPages
+                ? "cursor-not-allowed bg-gray-200 text-gray-400"
+                : "bg-blue-500 text-white hover:bg-blue-600"
+            }`}
+          >
+            <span className="mr-1">Next</span>
+            <FiChevronRight />
+          </button>
+        </div>
+      )}
+
+      {/* Floating Add Button */}
       <div className="fixed bottom-8 right-8 z-50">
         <button
-          className="flex items-center justify-center p-4 bg-blue-400 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+          className="flex items-center justify-center rounded-full bg-blue-400 p-4 text-white shadow-lg transition-all duration-300 hover:shadow-xl"
           onClick={() => setShowPopup(true)}
         >
           <FiPlus size={24} />
         </button>
       </div>
 
-      {/* Popup Form */}
       {showPopup && (
         <PopupForm
           onClose={closePopup}
-          onSubmit={handleAddCategory}
-          initialData={null} // No initial data for adding a new category
+          onSubmit={handleSubmitCategory}
+          initialData={selectedCategory}
         />
       )}
+      <ConfirmationDialog
+        isOpen={showConfirmDialog}
+        title="Delete Category?"
+        description={`This action cannot be undone. Are you sure you want to delete this category, ${categories.find((p) => p.id === pendingDeleteId)?.name}?`}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setShowConfirmDialog(false);
+          setPendingDeleteId(null);
+        }}
+      />
     </div>
   );
 }
-const CategoryTile = ({ category }: { category: Category }) => {
-    const { name, image } = category;
-  
-    // State to track whether the image has failed to load
-    const [imageError, setImageError] = useState(false);
-  
-    return (
-      <div
-        className="group relative overflow-hidden rounded-xl shadow-lg transform transition-transform duration-300 hover:scale-105 hover:shadow-2xl backdrop-blur-md cursor-pointer"
-      >
-        {/* Thumbnail Image */}
-        {image && !imageError ? (
-          // Try to load the image; if it fails, set `imageError` to true using onError
-          <img
-            src={image}
-            alt={name}
-            className="h-40 w-full object-cover rounded-xl"
-            onError={() => setImageError(true)} // Mark image as failed
-          />
-        ) : (
-          // Fallback UI for cases where the image is null or fails to load
-          <div className="h-40 w-full bg-gray-200 flex items-center justify-center rounded-xl">
-            <FiAlertTriangle size={32} className="text-red-500" />
-          </div>
-        )}
-  
-        {/* Name overlay */}
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 text-white text-lg font-semibold px-2">
-          <span className="truncate w-full text-center">{name}</span>
-        </div>
-      </div>
-    );
-  };
-  

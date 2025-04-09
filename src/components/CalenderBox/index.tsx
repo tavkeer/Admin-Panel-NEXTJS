@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import React, { useState } from "react";
+import { collection, doc, deleteDoc, orderBy, query } from "firebase/firestore";
 import { db } from "@/js/firebase.js";
+import { useCollection } from "react-firebase-hooks/firestore";
 import { FiTrash2 } from "react-icons/fi";
+import Alert from "../Alert/Alert";
+import ConfirmationDialog from "../ConfirmationDialog/ConfirmationDialog";
 
 // Define the type for an Admin object
 type Admin = {
@@ -13,151 +16,103 @@ type Admin = {
 };
 
 export function AdminsList() {
-  const [admins, setAdmins] = useState<Admin[]>([]); // State to store admins data
-  const [alert, setAlert] = useState<{
-    variant: "success" | "error";
-    title: string;
-    description?: string;
-  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  // Fetch data from Firestore for the 'admins' collection
-  useEffect(() => {
-    async function fetchAdmins() {
-      try {
-        const adminsCollection = collection(db, "admins");
-        const snapshot = await getDocs(adminsCollection);
+  const adminsRef = collection(db, "admins");
+  const adminsQuery = query(adminsRef, orderBy("created_at", "desc"));
+  const [snapshot, loading, hookError] = useCollection(adminsQuery);
 
-        const adminsData = snapshot.docs.map((doc) => ({
-          ...(doc.data() as Admin), // Explicitly cast `doc.data()` to Admin
-        }));
+  const admins: Admin[] =
+    snapshot?.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...(docSnap.data() as Omit<Admin, "id">),
+    })) || [];
 
-        console.log("Fetched Admins:", adminsData);
-        setAdmins(adminsData); // Update state with fetched admins
-      } catch (error) {
-        console.error("Error fetching admins:", error);
-        setAlert({
-          variant: "error",
-          title: "Failed to Fetch Admins",
-          description: "An unexpected error occurred while loading admins.",
-        });
-      }
-    }
+  if (hookError) {
+    console.error("Error loading admins:", hookError);
+    setError("An unexpected error occurred while loading admins.");
+  }
 
-    fetchAdmins();
-  }, []);
+  const deleteAdmin = (id: string) => {
+    setPendingDeleteId(id);
+    setShowConfirmDialog(true);
+  };
 
-  // Function to delete an admin
-  const deleteAdmin = async (id: string) => {
-    // Prevent deletion if it's the last admin
+  const confirmDelete = async () => {
     if (admins.length === 1) {
-      setAlert({
-        variant: "error",
-        title: "Cannot Delete Last Admin",
-        description: "At least one admin must remain in the system.",
-      });
+      setError(
+        "Cannot delete admin! At least one admin must remain in the system.",
+      );
       return;
     }
 
     try {
-      // Delete document from Firestore
-      await deleteDoc(doc(db, "admins", id));
-      console.log(`Admin with ID ${id} deleted successfully.`);
+      if (!pendingDeleteId) return;
+      await deleteDoc(doc(db, "admins", pendingDeleteId));
 
-      // Update local admin list state
-      setAdmins((prevAdmins) => prevAdmins.filter((admin) => admin.id !== id));
-
-      // Show success alert
-      setAlert({
-        variant: "success",
-        title: "Admin Deleted Successfully",
-        description: `Admin with ID ${id} was removed from the system.`,
-      });
+      const deletedAdmin = admins.find((a) => a.id === pendingDeleteId);
+      setSuccess(
+        `Admin with email ${deletedAdmin?.email} deleted successfully.`,
+      );
     } catch (error) {
       console.error("Error deleting admin:", error);
-
-      // Show error alert
-      setAlert({
-        variant: "error",
-        title: "Failed to Delete Admin",
-        description: "An unexpected error occurred.",
-      });
+      setError("Failed to delete admin! An unexpected error occurred.");
+    } finally {
+      setPendingDeleteId(null);
+      setShowConfirmDialog(false);
     }
   };
 
   return (
     <div className="container mx-auto p-6">
-      {/* Alerts */}
-      {alert && (
-        <Alert
-          variant={alert.variant}
-          title={alert.title}
-          description={alert.description}
-        />
+      {error && <Alert type="error" message={error} setMessage={setError} />}
+      {success && (
+        <Alert type="success" message={success} setMessage={setSuccess} />
       )}
 
-      <h1 className="text-2xl font-bold mb-4">Admins List</h1>
+      <h1 className="mb-4 text-2xl font-bold">Admins List</h1>
 
-      {/* Dynamically render Admin Cards */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {admins.map((admin) => (
-          <AdminCard key={admin.id} admin={admin} deleteAdmin={deleteAdmin} />
-        ))}
-      </div>
-    </div>
-  );
-}
+      {loading ? (
+        <p>Loading admins...</p>
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {admins.map((admin) => (
+            <div
+              key={admin.id}
+              className="flex items-center rounded-lg border border-gray-200 bg-white p-6 shadow-md transition-shadow hover:shadow-lg"
+            >
+              <div className="flex-1">
+                <h3 className="mb-2 text-xl font-semibold">{admin.name}</h3>
+                <p className="text-sm text-gray-600">
+                  <strong>Email:</strong> {admin.email}
+                </p>
+              </div>
+              <FiTrash2
+                className="cursor-pointer text-red-500 hover:text-red-600"
+                size={24}
+                onClick={() => deleteAdmin(admin.id)}
+                title="Delete Admin"
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
-// Admin card component to display individual admin details
-function AdminCard({
-  admin,
-  deleteAdmin,
-}: {
-  admin: Admin;
-  deleteAdmin: (id: string) => void;
-}) {
-  const { name, email, id } = admin;
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 flex items-center">
-      <div className="flex-1">
-        <h3 className="text-xl font-semibold mb-2">{name}</h3>
-        <p className="text-gray-600 text-sm">
-          <strong>Email:</strong> {email}
-        </p>
-      </div>
-      <FiTrash2
-        className="text-red-500 hover:text-red-600 cursor-pointer"
-        size={24}
-        onClick={() => deleteAdmin(id)} // Pass the admin's ID to the deletion function
-        title="Delete Admin"
+      <ConfirmationDialog
+        isOpen={showConfirmDialog}
+        title="Delete Admin?"
+        description={`This action cannot be undone. Are you sure you want to delete this admin, ${admins.find((a) => a.id === pendingDeleteId)?.email}?`}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setShowConfirmDialog(false);
+          setPendingDeleteId(null);
+        }}
       />
     </div>
   );
 }
-
-// Alert component to display success or error messages
-const Alert = ({
-  variant,
-  title,
-  description,
-}: {
-  variant: "success" | "error";
-  title: string;
-  description?: string;
-}) => {
-  const isSuccess = variant === "success";
-  const colorClasses = isSuccess
-    ? "bg-green-100 border-green-400 text-green-700"
-    : "bg-red-100 border-red-400 text-red-700";
-
-  return (
-    <div
-      className={`fixed top-4 right-4 border px-4 py-3 rounded shadow-lg ${colorClasses}`}
-    >
-      <strong>{title}</strong>
-      {description && <p className="text-sm mt-1">{description}</p>}
-    </div>
-  );
-};
 
 export default AdminsList;

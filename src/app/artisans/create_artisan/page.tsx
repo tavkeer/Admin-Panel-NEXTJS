@@ -7,6 +7,7 @@ import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import QuillEditorWrapper from "../_components/custom_editor_wrapper";
 import { db } from "@/js/firebase";
 import { doc, getDoc, updateDoc, addDoc, collection } from "firebase/firestore";
+import Alert from "@/components/Alert/Alert";
 
 type FormDataType = {
   name: string;
@@ -30,6 +31,8 @@ const CreateArtisanPage = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const isEditMode = !!artisanId; // Determine if we're editing an artisan
 
   useEffect(() => {
@@ -44,12 +47,11 @@ const CreateArtisanPage = () => {
             const data = artisanSnap.data() as FormDataType;
             setFormData(data); // Load artisan data into the form
           } else {
-            console.error("Artisan not found");
+            setError("Artisan not found");
             router.push("/artisans"); // Redirect if artisan not found
           }
         } catch (error) {
-          console.error("Error fetching artisan:", error);
-          alert("Error fetching artisan details.");
+          setError("Error fetching artisan");
         }
       }
     };
@@ -71,7 +73,7 @@ const CreateArtisanPage = () => {
 
     // Validate phone number format
     if (!/^\d{10}$/.test(formData.phone)) {
-      alert("Phone number must be a valid 10-digit number.");
+      setError("Phone number must be a valid 10-digit number.");
       return;
     }
 
@@ -85,7 +87,7 @@ const CreateArtisanPage = () => {
           ...formData,
           updated_at: new Date(),
         });
-        alert("Artisan updated successfully.");
+        setSuccess("Artisan updated successfully.");
       } else {
         // Create new artisan
         const artisansRef = collection(db, "artisans");
@@ -93,25 +95,30 @@ const CreateArtisanPage = () => {
           ...formData,
           created_at: new Date(),
         });
-        alert("Artisan added successfully.");
+        setSuccess("Artisan added successfully.");
       }
 
       router.push("/artisans"); // Navigate back to artisans list
     } catch (error) {
-      console.error("Error submitting artisan:", error);
-      alert("An error occurred while saving the artisan.");
+      setError("Error submitting artisan");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="mx-auto  p-6 bg-white shadow-md rounded-lg">
+    <div className="mx-auto rounded-lg bg-white p-6 shadow-md">
       {/* Breadcrumb */}
       <Breadcrumb pageName={isEditMode ? "Update Artisan" : "Create Artisan"} />
 
+      {error && <Alert type="error" message={error} setMessage={setError} />}
+
+      {success && (
+        <Alert type="success" message={success} setMessage={setSuccess} />
+      )}
+
       {/* Form Header */}
-      <h2 className="text-2xl font-bold text-center mb-6">
+      <h2 className="mb-6 text-center text-2xl font-bold">
         {isEditMode ? "Update Artisan" : "Add New Artisan"}
       </h2>
 
@@ -165,7 +172,10 @@ const CreateArtisanPage = () => {
           <label className="text-body-sm font-medium text-dark">
             Story <span className="ml-1 select-none text-red">*</span>
           </label>
-          <QuillEditorWrapper value={formData.story} onChange={handleStoryChange} />
+          <QuillEditorWrapper
+            value={formData.story}
+            onChange={handleStoryChange}
+          />
         </div>
 
         {/* Image Preview */}
@@ -189,7 +199,7 @@ const CreateArtisanPage = () => {
         {/* Submit Button */}
         <button
           type="submit"
-          className="mt-6 w-full rounded-lg bg-blue-500 py-3 text-white transition-all hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-6 w-full rounded-lg bg-blue-500 py-3 text-white transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={loading}
         >
           {loading ? "Submitting..." : isEditMode ? "Update" : "Submit"}

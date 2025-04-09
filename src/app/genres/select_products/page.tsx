@@ -1,11 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { collection, query, getDocs, orderBy, limit, startAfter, endBefore, updateDoc, doc, getDoc } from "firebase/firestore";
-import { db } from "@/js/firebase";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiChevronLeft, FiChevronRight, FiSearch, FiEdit, FiTrash2 } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiSearch } from "react-icons/fi";
+import {
+  collection,
+  doc,
+  orderBy,
+  query,
+  updateDoc,
+  limit,
+} from "firebase/firestore";
+import { useCollection, useDocument } from "react-firebase-hooks/firestore";
+import { db } from "@/js/firebase";
+import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import Alert from "@/components/Alert/Alert";
 
 type Product = {
   id: string;
@@ -13,153 +22,96 @@ type Product = {
   thumbnail_image?: string;
 };
 
+const ITEMS_PER_PAGE = 8;
+
 export default function SelectProductsPage() {
-  const ITEMS_PER_PAGE = 10;
+  const router = useRouter();
   const searchParams = useSearchParams();
   const genreId = searchParams.get("id");
   const genreName = searchParams.get("name");
-  const router = useRouter();
 
-  const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [lastVisible, setLastVisible] = useState<any>(null);
-  const [firstVisible, setFirstVisible] = useState<any>(null);
 
-  // Fetch initial selected products and products list
+  // Fetch genre document
+  const genreRef = genreId ? doc(db, "genres", genreId) : null;
+  const [genreSnapshot, loadingGenre, errorGenre] = useDocument(genreRef);
+
+  // Fetch products
+  const productsRef = query(collection(db, "products"), orderBy("name"));
+  const [productsSnapshot, loadingProducts, errorProducts] =
+    useCollection(productsRef);
+
   useEffect(() => {
-    if (genreId) {
-      fetchInitialSelectedProducts();
+    if (genreSnapshot?.exists() && productsSnapshot) {
+      const data = genreSnapshot.data();
+      const existingIds = new Set(productsSnapshot.docs.map((doc) => doc.id));
+      const validProductIds = (data.product_ids || []).filter((id: string) =>
+        existingIds.has(id),
+      );
+      setSelectedProducts(validProductIds);
     }
-  }, [genreId]);
+  }, [genreSnapshot, productsSnapshot]);
 
-  // We separate the product fetch to ensure selected products are loaded first
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  // Fetch selected products for the genre being edited
-  const fetchInitialSelectedProducts = async () => {
-    if (!genreId) return;
-    try {
-      const genreRef = doc(db, "genres", genreId);
-      const genreSnap = await getDoc(genreRef);
-      if (genreSnap.exists()) {
-        const data = genreSnap.data();
-        setSelectedProducts(data.product_ids || []);
-      } else {
-        console.warn(`Genre with ID ${genreId} not found.`);
-      }
-    } catch (err) {
-      console.error("Error fetching initial selected products:", err);
-      setError("Failed to load selected products.");
-    }
-  };
-
-  // Fetch products with pagination and search
-  const fetchProducts = async (direction?: "next" | "prev") => {
-    setLoading(true);
-    try {
-      const productsRef = collection(db, "products");
-      let productsQuery;
-
-      if (direction === "next" && lastVisible) {
-        productsQuery = query(productsRef, orderBy("name"), startAfter(lastVisible), limit(ITEMS_PER_PAGE));
-      } else if (direction === "prev" && firstVisible) {
-        productsQuery = query(productsRef, orderBy("name"), endBefore(firstVisible), limit(ITEMS_PER_PAGE));
-      } else {
-        productsQuery = query(productsRef, orderBy("name"), limit(ITEMS_PER_PAGE));
-      }
-
-      const snapshot = await getDocs(productsQuery);
-      const fetchedProducts: Product[] = snapshot.docs.map((doc) => ({
-        id: doc.id, // Firestore document ID
+  const allProducts: Product[] = useMemo(() => {
+    return (
+      productsSnapshot?.docs.map((doc) => ({
+        id: doc.id,
         name: doc.data().name,
-        thumbnail_image: doc.data().thumbnail_image || "https://via.placeholder.com/200",
-      }));
+        thumbnail_image:
+          doc.data().thumbnail_image || "https://via.placeholder.com/200",
+      })) || []
+    );
+  }, [productsSnapshot]);
 
-      if (!snapshot.empty) {
-        setFirstVisible(snapshot.docs[0]);
-        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
-      }
+  const filteredProducts = useMemo(() => {
+    const filtered = allProducts.filter((p) =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+    const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  }, [allProducts, searchTerm, currentPage]);
 
-      // Apply search filter if searchTerm exists
-      const filteredProducts = searchTerm.trim()
-        ? fetchedProducts.filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-        : fetchedProducts;
+  const totalPages = Math.ceil(
+    allProducts.filter((p) =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    ).length / ITEMS_PER_PAGE,
+  );
 
-      setProducts(filteredProducts);
-      setLoading(false);
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      setError("Error fetching products.");
-      setLoading(false);
-    }
-  };
-
-  // Handle pagination
-  const handleNextPage = () => {
-    setCurrentPage((prev) => prev + 1);
-    fetchProducts("next");
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1);
-      fetchProducts("prev");
-    }
-  };
-
-  // Toggle product selection
-  const handleProductToggle = (productId: string) => {
+  const toggleProduct = (id: string) => {
     setSelectedProducts((prev) =>
-      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
+      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id],
     );
   };
 
-  // Save selected products
   const handleSave = async () => {
-    if (!genreId) {
-      setError("No genre ID provided.");
-      return;
-    }
+    if (!genreRef) return;
+
+    const availableProductIds = new Set(allProducts.map((p) => p.id));
+    const validSelectedProducts = selectedProducts.filter((id) =>
+      availableProductIds.has(id),
+    );
+
     try {
-      const genreRef = doc(db, "genres", genreId);
-      await updateDoc(genreRef, { product_ids: selectedProducts });
+      await updateDoc(genreRef, { product_ids: validSelectedProducts });
       router.push("/genres");
     } catch (err) {
       console.error("Error saving genre:", err);
-      setError("Error saving selections.");
+      setError("Failed to save selected products.");
     }
   };
 
-  // Check if a product is selected
-  const isProductSelected = (productId: string) => {
-    return selectedProducts.includes(productId);
-  };
-
-  // These functions are placeholders for edit and delete actions
-  const handleEdit = (productId: string) => {
-    // Placeholder for edit functionality
-    console.log("Edit product:", productId);
-  };
-
-  const handleDelete = (productId: string) => {
-    // Placeholder for delete functionality
-    console.log("Delete product:", productId);
-  };
-
   return (
-    <div className="w-full min-h-screen  p-6">
+    <div className="min-h-screen w-full p-6">
       <div className="mb-8">
-        <Breadcrumb pageName={`Products for ${genreName || 'Genre'}`} />
+        <Breadcrumb pageName={`Products for ${genreName || "Genre"}`} />
+        {error && <Alert type="error" message={error} setMessage={setError} />}
       </div>
 
       <div className="mb-6 rounded-lg bg-white p-4 shadow-md">
-        <div className="flex items-center gap-2 border border-gray-200 rounded-md p-2">
+        <div className="flex items-center gap-2 rounded-md border border-gray-200 p-2">
           <FiSearch size={20} className="text-gray-600" />
           <input
             type="text"
@@ -167,33 +119,42 @@ export default function SelectProductsPage() {
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
-              fetchProducts(); // Trigger search on change
+              setCurrentPage(1);
             }}
             className="w-full focus:outline-none"
           />
         </div>
 
         <div className="mt-6 overflow-x-auto">
-          {loading ? (
+          {loadingGenre || loadingProducts ? (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500"></div>
             </div>
-          ) : error ? (
-            <div className="bg-red-100 p-4 rounded-md text-red-700">{error}</div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No products found.</div>
+          ) : errorGenre || errorProducts ? (
+            <div className="rounded-md bg-red-100 p-4 text-red-700">
+              {errorGenre?.message || errorProducts?.message}
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="py-8 text-center text-gray-500">
+              No products found.
+            </div>
           ) : (
             <table className="w-full table-auto">
               <thead>
-                <tr className="bg-gray-50 border-b">
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Image</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Name</th>
-                  <th className="px-4 py-3 text-center font-medium text-gray-600">Select</th>
-                  {/* <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th> */}
+                <tr className="border-b bg-gray-50">
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">
+                    Image
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">
+                    Name
+                  </th>
+                  <th className="px-4 py-3 text-center font-medium text-gray-600">
+                    Select
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <tr key={product.id} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <img
@@ -206,27 +167,11 @@ export default function SelectProductsPage() {
                     <td className="px-4 py-3 text-center">
                       <input
                         type="checkbox"
-                        checked={isProductSelected(product.id)}
-                        onChange={() => handleProductToggle(product.id)}
+                        checked={selectedProducts.includes(product.id)}
+                        onChange={() => toggleProduct(product.id)}
                         className="h-4 w-4 cursor-pointer"
                       />
                     </td>
-                    {/* <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(product.id)}
-                          className="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition-colors"
-                        >
-                          <FiEdit size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition-colors"
-                        >
-                          <FiTrash2 size={16} />
-                        </button>
-                      </div>
-                    </td> */}
                   </tr>
                 ))}
               </tbody>
@@ -236,17 +181,19 @@ export default function SelectProductsPage() {
 
         <div className="mt-6 flex items-center justify-between">
           <button
-            className="flex items-center gap-2 rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 disabled:opacity-50 transition-colors"
-            onClick={handlePrevPage}
-            disabled={currentPage === 1 || loading}
+            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            disabled={currentPage === 1}
+            className="flex items-center gap-2 rounded-md bg-gray-200 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-300 disabled:opacity-50"
           >
             <FiChevronLeft size={16} /> Previous
           </button>
-          <span className="text-gray-600">Page {currentPage}</span>
+          <span className="text-gray-600">
+            Page {currentPage} of {totalPages}
+          </span>
           <button
-            className="flex items-center gap-2 rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 disabled:opacity-50 transition-colors"
-            onClick={handleNextPage}
-            disabled={products.length < ITEMS_PER_PAGE || loading}
+            onClick={() => setCurrentPage((p) => p + 1)}
+            disabled={currentPage >= totalPages}
+            className="flex items-center gap-2 rounded-md bg-gray-200 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-300 disabled:opacity-50"
           >
             Next <FiChevronRight size={16} />
           </button>
@@ -255,13 +202,13 @@ export default function SelectProductsPage() {
 
       <div className="mt-6 flex justify-between">
         <button
-          className="rounded-md bg-gray-200 px-6 py-2 text-gray-700 hover:bg-gray-300 transition-colors"
+          className="rounded-md bg-gray-200 px-6 py-2 text-gray-700 transition-colors hover:bg-gray-300"
           onClick={() => router.push("/genres")}
         >
           Cancel
         </button>
         <button
-          className="rounded-md bg-blue-500 px-6 py-2 text-white hover:bg-blue-600 transition-colors"
+          className="rounded-md bg-blue-500 px-6 py-2 text-white transition-colors hover:bg-blue-600"
           onClick={handleSave}
         >
           Save

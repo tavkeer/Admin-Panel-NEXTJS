@@ -17,20 +17,28 @@ type Genre = {
 
 export default function GenresPage() {
   const router = useRouter();
-  const [genresSnapshot, genresLoading, genresError] = useCollection(collection(db, "genres"));
+  const [genresSnapshot, genresLoading, genresError] = useCollection(
+    collection(db, "genres"),
+  );
 
-  const goToSelectProductsPage = (genreId?: string,genreName?:string) => {
-    router.push(genreId ? `/genres/select_products?id=${genreId}&name=${genreName}` : "/genres/select_products");
+  const goToSelectProductsPage = (genreId?: string, genreName?: string) => {
+    router.push(
+      genreId
+        ? `/genres/select_products?id=${genreId}&name=${genreName}`
+        : "/genres/select_products",
+    );
   };
 
   return (
     <div className="mx-auto w-full max-w-[970px] p-6">
       <Breadcrumb pageName="Genres" />
-      <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {genresLoading ? (
           <p>Loading genres...</p>
         ) : genresError ? (
-          <p className="text-red-500">Error loading genres: {genresError.message}</p>
+          <p className="text-red-500">
+            Error loading genres: {genresError.message}
+          </p>
         ) : (
           genresSnapshot?.docs.map((doc) => {
             const genre: Genre = {
@@ -39,31 +47,52 @@ export default function GenresPage() {
               image: doc.data().image,
               product_ids: doc.data().product_ids || [],
             };
-            return <GenreTile key={genre.id} genre={genre} onClick={() => goToSelectProductsPage(genre.id,genre.name||'N/A')} />;
+            return (
+              <GenreTile
+                key={genre.id}
+                genre={genre}
+                onClick={() =>
+                  goToSelectProductsPage(genre.id, genre.name || "N/A")
+                }
+              />
+            );
           })
         )}
       </div>
-     
     </div>
   );
 }
 
-const GenreTile = ({ genre, onClick }: { genre: Genre; onClick: () => void }) => {
+const GenreTile = ({
+  genre,
+  onClick,
+}: {
+  genre: Genre;
+  onClick: () => void;
+}) => {
   const { name, image } = genre;
+
   return (
     <div
-      className="group relative cursor-pointer overflow-hidden rounded-xl shadow-lg transition-transform duration-300 hover:scale-105 hover:shadow-2xl"
+      className="group cursor-pointer overflow-hidden rounded-2xl bg-white shadow-md transition-transform duration-300 hover:scale-[1.02] hover:shadow-xl"
       onClick={onClick}
     >
-      {image ? (
-        <img src={image} alt={name} className="h-40 w-full rounded-xl object-cover" />
-      ) : (
-        <div className="flex h-40 w-full items-center justify-center rounded-xl bg-gray-200">
-          <FiAlertTriangle size={32} className="text-red-500" />
-        </div>
-      )}
-      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 px-2 text-lg font-semibold text-white">
-        <span className="w-full truncate text-center">{name}</span>
+      <div className="h-56 w-full">
+        {image ? (
+          <img
+            src={image}
+            alt={name}
+            className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gray-100">
+            <FiAlertTriangle size={36} className="text-red-500" />
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 text-center">
+        <h3 className="text-xl font-bold text-gray-800">{name}</h3>
       </div>
     </div>
   );
