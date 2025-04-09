@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FiChevronLeft, FiChevronRight, FiSearch } from "react-icons/fi";
 import {
@@ -9,7 +9,6 @@ import {
   orderBy,
   query,
   updateDoc,
-  limit,
 } from "firebase/firestore";
 import { useCollection, useDocument } from "react-firebase-hooks/firestore";
 import { db } from "@/js/firebase";
@@ -24,7 +23,8 @@ type Product = {
 
 const ITEMS_PER_PAGE = 8;
 
-export default function SelectProductsPage() {
+// Create a separate component that uses useSearchParams
+function ProductSelection() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const genreId = searchParams.get("id");
@@ -215,5 +215,23 @@ export default function SelectProductsPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+// Loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="flex h-screen w-full items-center justify-center">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+    </div>
+  );
+}
+
+// Main component that wraps the ProductSelection with Suspense
+export default function SelectProductsPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ProductSelection />
+    </Suspense>
   );
 }

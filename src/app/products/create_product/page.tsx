@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDocument, useCollection } from "react-firebase-hooks/firestore";
 import InputGroup from "@/components/FormElements/InputGroup";
@@ -45,7 +45,17 @@ const RETURN_POLICY_OPTIONS = [
   "No Return and Exchange",
 ];
 
-export default function ProductsForm() {
+// Loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="flex h-screen w-full items-center justify-center">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+    </div>
+  );
+}
+
+// Component that uses useSearchParams
+function ProductFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const productId = searchParams?.get("id"); // Check if we're in edit mode
@@ -764,5 +774,14 @@ export default function ProductsForm() {
         </form>
       )}
     </div>
+  );
+}
+
+// Main component that wraps with Suspense
+export default function ProductsForm() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ProductFormContent />
+    </Suspense>
   );
 }
