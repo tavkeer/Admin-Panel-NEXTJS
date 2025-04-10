@@ -23,6 +23,7 @@ type FormDataType = {
   thumbnail_image: string;
   product_ids: string[];
   status: "live" | "closed";
+  discount_percentage: number;
 };
 
 type Product = {
@@ -42,6 +43,7 @@ const SalesPage = () => {
     thumbnail_image: "",
     product_ids: [],
     status: "live",
+    discount_percentage: 0,
   });
 
   const [loading, setLoading] = useState(false);
@@ -99,8 +101,11 @@ const SalesPage = () => {
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "number" ? Number(value) : value,
+    }));
   };
 
   const toggleProduct = (id: string) => {
@@ -227,6 +232,24 @@ const SalesPage = () => {
             </div>
           </div>
         )}
+
+        <label
+          htmlFor="discount_percentage"
+          className="my-4 block text-sm font-medium text-gray-700"
+        >
+          Discount Percentage (%)
+        </label>
+        <input
+          type="number"
+          id="discount_percentage"
+          name="discount_percentage"
+          placeholder="Enter discount percentage"
+          min={0}
+          max={100}
+          value={formData.discount_percentage.toString()}
+          onChange={handleInputChange}
+          className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        />
 
         {/* Status Selection */}
         <div className="mt-4">
