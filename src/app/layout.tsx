@@ -16,7 +16,7 @@ import { AuthProvider } from "@/context/AuthContext";
 export const metadata: Metadata = {
   title: {
     template: "%s | NextAdmin - Next.js Dashboard Kit",
-    default: "NextAdmin - Next.js Dashboard Kit",
+    default: "Shehjar - Admin Panel",
   },
   description:
     "Next.js admin dashboard toolkit with 200+ templates, UI components, and integrations for fast dashboard development.",
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: PropsWithChildren) {
           <AuthProvider>
             <NextTopLoader color="#5750F1" showSpinner={false} />
 
-            <div className="flex min-h-screen">
+            <div className="hidden min-h-screen md:flex">
               <Sidebar />
 
               <div className="w-full bg-gray-2 dark:bg-[#020d1a]">
@@ -40,6 +40,11 @@ export default function RootLayout({ children }: PropsWithChildren) {
                   {children}
                 </main>
               </div>
+            </div>
+            <div className="flex h-screen w-screen items-center justify-center md:hidden">
+              <p className="text-center text-xl font-bold">
+                This Admin Panel is not available on mobile
+              </p>
             </div>
           </AuthProvider>
         </Providers>

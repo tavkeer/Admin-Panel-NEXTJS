@@ -187,7 +187,6 @@ export function ArrowLeftIcon(props: PropsType) {
   );
 }
 
-// Add this to your icons.tsx or icons.js file
 export function LogOutIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -205,6 +204,47 @@ export function LogOutIcon(props: React.SVGProps<SVGSVGElement>) {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <polyline points="16 17 21 12 16 7" />
       <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
+export function OrderIcon(props: PropsType) {
+  return (
+    <svg width={24} height={24} viewBox="0 0 24 24" fill="none" {...props}>
+      <path
+        fill="currentColor"
+        d="M7 3a2 2 0 00-2 2v14a1 1 0 001.447.894L12 18.118l5.553 1.776A1 1 0 0019 19V5a2 2 0 00-2-2H7zm0 2h10v11.382l-4.553-1.457a1 1 0 00-.894 0L7 16.382V5z"
+      />
+    </svg>
+  );
+}
+
+export function SaleIcon(props: PropsType) {
+  return (
+    <svg width={24} height={24} viewBox="0 0 24 24" fill="none" {...props}>
+      <path
+        fill="currentColor"
+        d="M21.71 11.29l-9-9a1.003 1.003 0 00-1.42 0l-9 9a1.003 1.003 0 000 1.42l9 9a1.003 1.003 0 001.42 0l9-9a1.003 1.003 0 000-1.42zM12 19.59L4.41 12 12 4.41 19.59 12 12 19.59z"
+      />
+      <path
+        fill="currentColor"
+        d="M9 9h.01M15 15h.01M8 16l8-8"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function DeliveryIcon(props: PropsType) {
+  return (
+    <svg width={24} height={24} viewBox="0 0 24 24" fill="none" {...props}>
+      <path
+        fill="currentColor"
+        d="M20 8h-3V4a1 1 0 00-1-1H3a1 1 0 00-1 1v13a2 2 0 002 2h1a3 3 0 006 0h2a3 3 0 006 0h1a1 1 0 001-1v-6a1 1 0 00-.293-.707l-3-3A1 1 0 0020 8zM4 17v-1h3.18a3 3 0 000 1H4zm5.5 1a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm2.5-2h-1.18a3.001 3.001 0 00-5.64 0H13V5h3v4a1 1 0 001 1h3v6z"
+      />
     </svg>
   );
 }

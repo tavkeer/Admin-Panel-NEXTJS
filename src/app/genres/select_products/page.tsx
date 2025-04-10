@@ -3,13 +3,7 @@
 import React, { useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FiChevronLeft, FiChevronRight, FiSearch } from "react-icons/fi";
-import {
-  collection,
-  doc,
-  orderBy,
-  query,
-  updateDoc,
-} from "firebase/firestore";
+import { collection, doc, orderBy, query, updateDoc } from "firebase/firestore";
 import { useCollection, useDocument } from "react-firebase-hooks/firestore";
 import { db } from "@/js/firebase";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";

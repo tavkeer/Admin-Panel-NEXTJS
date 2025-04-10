@@ -40,6 +40,24 @@ export const NAV_DATA = [
         icon: Icons.PieChart,
         items: [],
       },
+      {
+        title: "Sales",
+        url: "/sales",
+        icon: Icons.SaleIcon,
+        items: [],
+      },
+      {
+        title: "Delivery",
+        url: "/delivery",
+        icon: Icons.DeliveryIcon,
+        items: [],
+      },
+      {
+        title: "Orders",
+        url: "/orders",
+        icon: Icons.OrderIcon,
+        items: [],
+      },
       // {
       //   title: "Forms",
       //   icon: Icons.Alphabet,
