@@ -7,6 +7,7 @@ import { collection } from "firebase/firestore";
 import { db } from "@/js/firebase";
 import { FiAlertTriangle, FiPlus } from "react-icons/fi";
 import { useRouter } from "next/navigation";
+import ProtectedRoute from "@/components/ProtectedRoute/ProtectedRoute";
 
 type Genre = {
   id: string;
@@ -30,36 +31,38 @@ export default function GenresPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[970px] p-6">
-      <Breadcrumb pageName="Genres" />
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {genresLoading ? (
-          <p>Loading genres...</p>
-        ) : genresError ? (
-          <p className="text-red-500">
-            Error loading genres: {genresError.message}
-          </p>
-        ) : (
-          genresSnapshot?.docs.map((doc) => {
-            const genre: Genre = {
-              id: doc.id,
-              name: doc.data().name,
-              image: doc.data().image,
-              product_ids: doc.data().product_ids || [],
-            };
-            return (
-              <GenreTile
-                key={genre.id}
-                genre={genre}
-                onClick={() =>
-                  goToSelectProductsPage(genre.id, genre.name || "N/A")
-                }
-              />
-            );
-          })
-        )}
+    <ProtectedRoute>
+      <div className="mx-auto w-full max-w-[970px] p-6">
+        <Breadcrumb pageName="Genres" />
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {genresLoading ? (
+            <p>Loading genres...</p>
+          ) : genresError ? (
+            <p className="text-red-500">
+              Error loading genres: {genresError.message}
+            </p>
+          ) : (
+            genresSnapshot?.docs.map((doc) => {
+              const genre: Genre = {
+                id: doc.id,
+                name: doc.data().name,
+                image: doc.data().image,
+                product_ids: doc.data().product_ids || [],
+              };
+              return (
+                <GenreTile
+                  key={genre.id}
+                  genre={genre}
+                  onClick={() =>
+                    goToSelectProductsPage(genre.id, genre.name || "N/A")
+                  }
+                />
+              );
+            })
+          )}
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }
 

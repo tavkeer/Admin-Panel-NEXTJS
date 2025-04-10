@@ -3,17 +3,21 @@
 import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NAV_DATA } from "./data";
-import { ArrowLeftIcon, ChevronUp } from "./icons";
+import { ArrowLeftIcon, ChevronUp, LogOutIcon } from "./icons";
 import { MenuItem } from "./menu-item";
 import { useSidebarContext } from "./sidebar-context";
+import ProtectedRoute from "@/components/ProtectedRoute/ProtectedRoute";
+import { useAuth } from "@/context/AuthContext"; // Import the auth context
 
 export function Sidebar() {
   const pathname = usePathname();
   const { setIsOpen, isOpen, isMobile, toggleSidebar } = useSidebarContext();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const { logout } = useAuth(); // Get the logout function from auth context
+  const router = useRouter();
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) => (prev.includes(title) ? [] : [title]));
@@ -22,6 +26,16 @@ export function Sidebar() {
     // setExpandedItems((prev) =>
     //   prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title],
     // );
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push("/login");
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
   };
 
   useEffect(() => {
@@ -33,7 +47,6 @@ export function Sidebar() {
           //   if (!expandedItems.includes(item.title)) {
           //     toggleExpanded(item.title);
           //   }
-
           //   // Break the loop
           //   return true;
           // }
@@ -43,7 +56,7 @@ export function Sidebar() {
   }, [pathname]);
 
   return (
-    <>
+    <ProtectedRoute>
       {/* Mobile Overlay */}
       {isMobile && isOpen && (
         <div
@@ -143,10 +156,7 @@ export function Sidebar() {
                           </div>
                         ) : (
                           (() => {
-                            const href =
-                              "url" in item
-                                ? item.url + ""
-                                : "/" ;
+                            const href = "url" in item ? item.url + "" : "/";
 
                             return (
                               <MenuItem
@@ -163,8 +173,7 @@ export function Sidebar() {
                                 <span>{item.title}</span>
                               </MenuItem>
                             );
-                          })
-                          ()
+                          })()
                         )}
                       </li>
                     ))}
@@ -173,8 +182,22 @@ export function Sidebar() {
               </div>
             ))}
           </div>
+
+          {/* Logout Button - Added at the bottom of the sidebar */}
+          <div className="mt-auto border-t border-gray-200 pt-4 dark:border-gray-800">
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              <LogOutIcon
+                className="size-6 shrink-0 text-gray-500 dark:text-gray-400"
+                aria-hidden="true"
+              />
+              <span>Logout</span>
+            </button>
+          </div>
         </div>
       </aside>
-    </>
+    </ProtectedRoute>
   );
 }

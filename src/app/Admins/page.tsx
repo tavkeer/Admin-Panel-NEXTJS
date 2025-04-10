@@ -16,6 +16,7 @@ import { FiX, FiPlus } from "react-icons/fi";
 import { useCollection } from "react-firebase-hooks/firestore";
 import { useRouter } from "next/navigation";
 import Alert from "@/components/Alert/Alert";
+import ProtectedRoute from "@/components/ProtectedRoute/ProtectedRoute";
 
 const CalendarPage = () => {
   const router = useRouter();
@@ -121,7 +122,7 @@ const CalendarPage = () => {
   }, [success]);
 
   return (
-    <>
+    <ProtectedRoute>
       <Breadcrumb pageName="Admins" />
       <CalendarBox />
 
@@ -212,7 +213,7 @@ const CalendarPage = () => {
       {success && (
         <Alert type="success" message={success} setMessage={setSuccess} />
       )}
-    </>
+    </ProtectedRoute>
   );
 };
 
