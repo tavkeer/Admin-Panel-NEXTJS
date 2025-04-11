@@ -6,7 +6,7 @@ type PopupFormProps = {
   onSubmit: (formData: { name: string }) => void;
 };
 
-export default function PopupForm({
+export default function CategoryPopupForm({
   initialData,
   onClose,
   onSubmit,

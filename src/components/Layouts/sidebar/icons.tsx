@@ -248,3 +248,27 @@ export function DeliveryIcon(props: PropsType) {
     </svg>
   );
 }
+
+export function BannerIcon(props: PropsType) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      {...props}
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M3.75 2.5a.75.75 0 00-.75.75v17.5a.75.75 0 001.5 0v-17.5a.75.75 0 00-.75-.75z"
+      />
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M3 4.25a.75.75 0 01.75-.75h16.5a.75.75 0 01.693 1.044l-3 6.5a.75.75 0 010 .912l3 6.5A.75.75 0 0120.25 19.5H3.75a.75.75 0 010-1.5h15.69l-2.654-5.75 2.654-5.75H3.75a.75.75 0 01-.75-.75z"
+      />
+    </svg>
+  );
+}
