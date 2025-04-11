@@ -145,6 +145,24 @@ const CreateArtisanPage = () => {
           className="mt-4"
         />
 
+        {/* Image Preview */}
+        {formData.image && (
+          <div className="mt-4">
+            <p className="mb-2 text-sm text-gray-600">Thumbnail Preview:</p>
+            <div className="inline-block overflow-hidden rounded-lg border border-gray-200">
+              <img
+                src={formData.image}
+                alt="Preview"
+                className="max-h-48 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.src =
+                    "https://via.placeholder.com/300?text=Invalid+Image+URL";
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         <InputGroup
           label="Address"
           placeholder="Enter address"
@@ -179,7 +197,7 @@ const CreateArtisanPage = () => {
         </div>
 
         {/* Image Preview */}
-        {formData.image && (
+        {/* {formData.image && (
           <div className="mt-4">
             <p className="mb-2 text-sm text-gray-600">Image Preview:</p>
             <div className="h-32 w-full overflow-hidden rounded-lg">
@@ -194,7 +212,7 @@ const CreateArtisanPage = () => {
               />
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Submit Button */}
         <button

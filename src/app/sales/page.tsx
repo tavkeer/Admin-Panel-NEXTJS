@@ -218,7 +218,7 @@ const SalesPage = () => {
         {/* Image Preview - Modified for better visibility */}
         {formData.thumbnail_image && (
           <div className="mt-4">
-            <p className="mb-2 text-sm text-gray-600">Image Preview:</p>
+            <p className="mb-2 text-sm text-gray-600">Thumbnail Preview:</p>
             <div className="inline-block overflow-hidden rounded-lg border border-gray-200">
               <img
                 src={formData.thumbnail_image}

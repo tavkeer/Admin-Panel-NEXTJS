@@ -401,6 +401,24 @@ function ProductFormContent() {
             required
           />
 
+          {/* Thumbnail Preview */}
+          {formData.thumbnail_image && (
+            <div className="mt-4">
+              <p className="mb-2 text-sm text-gray-600">Thumbnail Preview:</p>
+              <div className="inline-block overflow-hidden rounded-lg border border-gray-200">
+                <img
+                  src={formData.thumbnail_image}
+                  alt="Preview"
+                  className="max-h-48 w-auto object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      "https://via.placeholder.com/300?text=Invalid+Image+URL";
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Images */}
           <div className="mt-4">
             <label className="mb-2.5 block text-body-sm font-medium text-dark">
@@ -439,6 +457,34 @@ function ProductFormContent() {
               <span>Add Image</span>
             </button>
           </div>
+
+          {/* Images Preview */}
+          {formData.images.some((image) => image.trim() !== "") && (
+            <div className="mt-4">
+              <p className="mb-2 text-sm text-gray-600">Images Preview:</p>
+              <div className="flex flex-wrap gap-4">
+                {formData.images.map(
+                  (image, index) =>
+                    image.trim() !== "" && (
+                      <div
+                        key={index}
+                        className="inline-block overflow-hidden rounded-lg border border-gray-200"
+                      >
+                        <img
+                          src={image}
+                          alt={`Preview ${index + 1}`}
+                          className="max-h-48 w-auto object-contain"
+                          onError={(e) => {
+                            e.currentTarget.src =
+                              "https://via.placeholder.com/300?text=Invalid+Image+URL";
+                          }}
+                        />
+                      </div>
+                    ),
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Artisan Selection */}
           <div className="mt-4">
