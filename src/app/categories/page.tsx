@@ -30,6 +30,7 @@ import ProtectedRoute from "@/components/ProtectedRoute/ProtectedRoute";
 type Category = {
   id: string;
   name: string;
+  imageUrl?: string;
 };
 
 export default function CategoriesPage() {
@@ -93,6 +94,7 @@ export default function CategoriesPage() {
       let results = snapshot.docs.map((doc) => ({
         id: doc.id,
         name: doc.data().category_name || "",
+        imageUrl: doc.data().image_url || "",
       }));
 
       if (searchTerm.trim()) {
@@ -197,27 +199,48 @@ export default function CategoriesPage() {
         return;
       }
 
+      // Prepare data to save with optional image URL
+      const categoryData: any = {
+        category_name: name,
+      };
+
+      // Only add image_url if it exists
+      if (formData.imageUrl) {
+        categoryData.image_url = formData.imageUrl;
+      }
+
       if (selectedCategory) {
-        await updateDoc(doc(db, "categories", selectedCategory.id), {
-          category_name: name,
-        });
+        await updateDoc(
+          doc(db, "categories", selectedCategory.id),
+          categoryData,
+        );
 
         setCategories((prev) =>
           prev.map((cat) =>
-            cat.id === selectedCategory.id ? { ...cat, name } : cat,
+            cat.id === selectedCategory.id
+              ? {
+                  ...cat,
+                  name,
+                  imageUrl: formData.imageUrl || cat.imageUrl,
+                }
+              : cat,
           ),
         );
 
         setSuccess("Category updated.");
       } else {
-        const newDoc = await addDoc(collection(db, "categories"), {
-          category_name: name,
-          created_at: Timestamp.now(),
-        });
+        // Add created_at for new categories
+        categoryData.created_at = Timestamp.now();
+
+        const newDoc = await addDoc(collection(db, "categories"), categoryData);
 
         if (!searchTerm && currentPage === 1) {
           setCategories((prev) => [
-            { id: newDoc.id, name },
+            {
+              id: newDoc.id,
+              name,
+              imageUrl: formData.imageUrl,
+            },
             ...prev.slice(0, ITEMS_PER_PAGE - 1),
           ]);
         }
@@ -273,6 +296,7 @@ export default function CategoriesPage() {
               <table className="w-full table-auto border-collapse overflow-hidden rounded-lg border border-gray-300 bg-white shadow">
                 <thead>
                   <tr className="bg-gray-50 text-gray-700">
+                    <th className="px-4 py-2 text-left">Image</th>
                     <th className="px-4 py-2 text-left">Category Name</th>
                     <th className="px-4 py-2 text-left">Actions</th>
                   </tr>
@@ -283,6 +307,25 @@ export default function CategoriesPage() {
                       key={category.id}
                       className="border-b border-gray-200 transition-colors hover:bg-gray-100"
                     >
+                      <td className="w-16 px-4 py-2">
+                        {category.imageUrl ? (
+                          <div className="h-10 w-10 overflow-hidden rounded-md border border-gray-200">
+                            <img
+                              src={category.imageUrl}
+                              alt={category.name}
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  "/placeholder-image.png";
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-gray-100 text-xs text-gray-400">
+                            No img
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-2">{category.name}</td>
                       <td className="px-4 py-2">
                         <div className="flex items-center space-x-2">

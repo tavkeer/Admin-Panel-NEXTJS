@@ -19,13 +19,13 @@ type FormDataType = {
   category_id: string;
   description: string;
   returnPolicy: string;
+  price: string; // Single price for all combinations
   colors: string[];
   sizes: string[];
   combinations: {
     color: string;
     size: string;
-    price: string;
-    quantity: string;
+    quantity: string; // Only quantity in combinations
   }[];
 };
 
@@ -69,6 +69,7 @@ function ProductFormContent() {
     category_id: "",
     returnPolicy: "",
     description: "",
+    price: "", // Initialize single price
     colors: [""], // Minimum one field for colors
     sizes: [""], // Minimum one field for sizes
     combinations: [],
@@ -200,7 +201,7 @@ function ProductFormContent() {
       ...formData,
       combinations: [
         ...formData.combinations,
-        { color: "", size: "", price: "", quantity: "" },
+        { color: "", size: "", quantity: "" }, // Only need quantity
       ],
     });
   };
@@ -256,6 +257,18 @@ function ProductFormContent() {
       return false;
     }
 
+    // Validate price
+    if (!formData.price.trim()) {
+      setError("Price is required.");
+      return false;
+    }
+
+    // Validate price is numeric
+    if (isNaN(parseFloat(formData.price))) {
+      setError("Price must be a valid number.");
+      return false;
+    }
+
     const validColors = formData.colors.filter((color) => color.trim() !== "");
     if (validColors.length < 1) {
       setError("Please add at least one valid color.");
@@ -301,13 +314,12 @@ function ProductFormContent() {
       (combination) =>
         combination.color.trim() !== "" &&
         combination.size.trim() !== "" &&
-        combination.price.trim() !== "" &&
         combination.quantity.trim() !== "",
     );
 
     if (!validCombinations) {
       setError(
-        "Each combination must include valid color, size, price, and quantity.",
+        "Each combination must include valid color, size, and quantity.",
       );
       return false;
     }
@@ -397,6 +409,17 @@ function ProductFormContent() {
             type="text"
             name="thumbnail_image"
             value={formData.thumbnail_image}
+            handleChange={handleInputChange}
+            required
+          />
+
+          {/* Added price field */}
+          <InputGroup
+            label="Price"
+            placeholder="Enter product price"
+            type="text"
+            name="price"
+            value={formData.price}
             handleChange={handleInputChange}
             required
           />
@@ -667,14 +690,22 @@ function ProductFormContent() {
                 if (validateStep1()) setStep(2);
               }}
             >
-              Next (Combinations)
+              Next (Stock Management)
             </button>
           </div>
         </form>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="mt-4">
-            <h2 className="mb-4 text-xl font-semibold">Combinations</h2>
+            <h2 className="mb-4 text-xl font-semibold">Stock Management</h2>
+            <div className="mb-3 rounded-lg bg-blue-50 p-4 text-blue-700">
+              <p className="font-medium">Product Price: ${formData.price}</p>
+              <p className="text-sm">
+                Configure stock quantities for each color and size combination
+                below.
+              </p>
+            </div>
+
             {formData.combinations.length === 0 ? (
               <div className="mb-4 rounded-lg border border-dashed border-gray-300 p-8 text-center">
                 <p className="text-gray-500">
@@ -690,7 +721,7 @@ function ProductFormContent() {
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:gap-4">
                     {/* Color */}
-                    <div className="mb-4 w-full md:mb-0 md:w-1/2">
+                    <div className="mb-4 w-full md:mb-0 md:w-1/3">
                       <label className="text-sm font-medium text-gray-600">
                         Color
                       </label>
@@ -715,7 +746,7 @@ function ProductFormContent() {
                     </div>
 
                     {/* Size */}
-                    <div className="w-full md:w-1/2">
+                    <div className="mb-4 w-full md:mb-0 md:w-1/3">
                       <label className="text-sm font-medium text-gray-600">
                         Size
                       </label>
@@ -734,29 +765,9 @@ function ProductFormContent() {
                         ))}
                       </select>
                     </div>
-                  </div>
 
-                  {/* Price and Quantity */}
-                  <div className="mt-4 flex flex-col md:flex-row md:items-center md:gap-4">
-                    <div className="mb-4 w-full md:mb-0 md:w-1/2">
-                      <label className="text-sm font-medium text-gray-600">
-                        Price
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter price"
-                        value={combination.price}
-                        onChange={(e) =>
-                          handleCombinationChange(
-                            e.target.value,
-                            index,
-                            "price",
-                          )
-                        }
-                        className="w-full rounded-lg border px-4 py-2 ring-blue-500 focus:outline-none focus:ring-2"
-                      />
-                    </div>
-                    <div className="w-full md:w-1/2">
+                    {/* Quantity */}
+                    <div className="w-full md:w-1/3">
                       <label className="text-sm font-medium text-gray-600">
                         Quantity
                       </label>
