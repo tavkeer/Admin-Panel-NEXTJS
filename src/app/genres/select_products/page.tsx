@@ -13,6 +13,7 @@ type Product = {
   id: string;
   name: string;
   thumbnail_image?: string;
+  created_at: Date;
 };
 
 const ITEMS_PER_PAGE = 8;
@@ -33,8 +34,11 @@ function ProductSelection() {
   const genreRef = genreId ? doc(db, "genres", genreId) : null;
   const [genreSnapshot, loadingGenre, errorGenre] = useDocument(genreRef);
 
-  // Fetch products
-  const productsRef = query(collection(db, "products"), orderBy("name"));
+  // Fetch products sorted by created_at in descending order (newest first)
+  const productsRef = query(
+    collection(db, "products"),
+    orderBy("created_at", "desc"),
+  );
   const [productsSnapshot, loadingProducts, errorProducts] =
     useCollection(productsRef);
 
@@ -51,12 +55,16 @@ function ProductSelection() {
 
   const allProducts: Product[] = useMemo(() => {
     return (
-      productsSnapshot?.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name,
-        thumbnail_image:
-          doc.data().thumbnail_image || "https://via.placeholder.com/200",
-      })) || []
+      productsSnapshot?.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name,
+          thumbnail_image:
+            data.thumbnail_image || "https://via.placeholder.com/200",
+          created_at: data.created_at?.toDate() || new Date(0), // Convert Firestore timestamp to Date
+        };
+      }) || []
     );
   }, [productsSnapshot]);
 
@@ -142,6 +150,9 @@ function ProductSelection() {
                   <th className="px-4 py-3 text-left font-medium text-gray-600">
                     Name
                   </th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">
+                    Created At
+                  </th>
                   <th className="px-4 py-3 text-center font-medium text-gray-600">
                     Select
                   </th>
@@ -158,6 +169,9 @@ function ProductSelection() {
                       />
                     </td>
                     <td className="px-4 py-3">{product.name}</td>
+                    <td className="px-4 py-3">
+                      {product.created_at.toLocaleDateString()}
+                    </td>
                     <td className="px-4 py-3 text-center">
                       <input
                         type="checkbox"

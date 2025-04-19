@@ -350,15 +350,33 @@ function ProductFormContent() {
 
     try {
       if (productId) {
+        // Update existing product
         const productRef = doc(db, "products", productId);
-        await setDoc(productRef, formData, { merge: true });
+
+        // Update the document with form data
+        // Also ensure the id field is set correctly for existing products
+        await setDoc(
+          productRef,
+          {
+            ...formData,
+            id: productId, // Ensure id field is set to the document ID
+          },
+          { merge: true },
+        );
+
         setSuccess("Product updated successfully.");
       } else {
+        // Create new product
         const productsRef = collection(db, "products");
+        // First, add the document to get its ID
         const productDoc = await addDoc(productsRef, {
           ...formData,
           created_at: new Date(),
         });
+
+        // Then update the document to include its own ID
+        await setDoc(productDoc, { id: productDoc.id }, { merge: true });
+
         setSuccess("Product added successfully.");
       }
       router.push("/products");
