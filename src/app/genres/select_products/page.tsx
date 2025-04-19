@@ -2,7 +2,12 @@
 
 import React, { useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiChevronLeft, FiChevronRight, FiSearch } from "react-icons/fi";
+import {
+  FiChevronLeft,
+  FiChevronRight,
+  FiSearch,
+  FiImage,
+} from "react-icons/fi";
 import { collection, doc, orderBy, query, updateDoc } from "firebase/firestore";
 import { useCollection, useDocument } from "react-firebase-hooks/firestore";
 import { db } from "@/js/firebase";
@@ -29,6 +34,10 @@ function ProductSelection() {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [genreThumbnail, setGenreThumbnail] = useState("");
+  const [thumbnailPreview, setThumbnailPreview] = useState("");
+  const [isValidThumbnail, setIsValidThumbnail] = useState(true);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Fetch genre document
   const genreRef = genreId ? doc(db, "genres", genreId) : null;
@@ -50,6 +59,12 @@ function ProductSelection() {
         existingIds.has(id),
       );
       setSelectedProducts(validProductIds);
+
+      // Set genre thumbnail if exists
+      if (data.thumbnail_image) {
+        setGenreThumbnail(data.thumbnail_image);
+        setThumbnailPreview(data.thumbnail_image);
+      }
     }
   }, [genreSnapshot, productsSnapshot]);
 
@@ -88,6 +103,40 @@ function ProductSelection() {
     );
   };
 
+  const validateImageUrl = (url: string) => {
+    setPreviewLoading(true);
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        setIsValidThumbnail(true);
+        setThumbnailPreview(url);
+        setPreviewLoading(false);
+        resolve(true);
+      };
+      img.onerror = () => {
+        setIsValidThumbnail(false);
+        setThumbnailPreview("");
+        setPreviewLoading(false);
+        resolve(false);
+      };
+      img.src = url;
+    });
+  };
+
+  const handleThumbnailChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const url = e.target.value;
+    setGenreThumbnail(url);
+
+    if (url) {
+      await validateImageUrl(url);
+    } else {
+      setThumbnailPreview("");
+      setIsValidThumbnail(true);
+    }
+  };
+
   const handleSave = async () => {
     if (!genreRef) return;
 
@@ -97,7 +146,10 @@ function ProductSelection() {
     );
 
     try {
-      await updateDoc(genreRef, { product_ids: validSelectedProducts });
+      await updateDoc(genreRef, {
+        product_ids: validSelectedProducts,
+        thumbnail_image: isValidThumbnail ? genreThumbnail : null,
+      });
       router.push("/genres");
     } catch (err) {
       console.error("Error saving genre:", err);
@@ -113,6 +165,53 @@ function ProductSelection() {
       </div>
 
       <div className="mb-6 rounded-lg bg-white p-4 shadow-md">
+        {/* Thumbnail image section */}
+        <div className="mb-6">
+          <h3 className="mb-2 font-medium text-gray-700">
+            Genre Thumbnail Image
+          </h3>
+          <div className="flex items-center gap-2 rounded-md border border-gray-200 p-2">
+            <FiImage size={20} className="text-gray-600" />
+            <input
+              type="text"
+              placeholder="Enter image URL for genre thumbnail..."
+              value={genreThumbnail}
+              onChange={handleThumbnailChange}
+              className="w-full focus:outline-none"
+            />
+          </div>
+
+          {/* Thumbnail preview */}
+          {previewLoading && (
+            <div className="mt-2 flex items-center">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+              <span className="ml-2 text-sm text-gray-500">
+                Validating image...
+              </span>
+            </div>
+          )}
+
+          {!isValidThumbnail && genreThumbnail && (
+            <div className="mt-2 text-sm text-red-500">
+              Invalid image URL. Please provide a valid image link.
+            </div>
+          )}
+
+          {thumbnailPreview && (
+            <div className="mt-4">
+              <p className="mb-2 text-sm text-gray-500">Preview:</p>
+              <div className="flex justify-center rounded-lg border border-gray-200 p-4">
+                <img
+                  src={thumbnailPreview}
+                  alt="Genre thumbnail preview"
+                  className="max-h-60 max-w-full object-contain"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Search section */}
         <div className="flex items-center gap-2 rounded-md border border-gray-200 p-2">
           <FiSearch size={20} className="text-gray-600" />
           <input
@@ -196,7 +295,7 @@ function ProductSelection() {
             <FiChevronLeft size={16} /> Previous
           </button>
           <span className="text-gray-600">
-            Page {currentPage} of {totalPages}
+            Page {currentPage} of {totalPages || 1}
           </span>
           <button
             onClick={() => setCurrentPage((p) => p + 1)}
@@ -218,6 +317,7 @@ function ProductSelection() {
         <button
           className="rounded-md bg-blue-500 px-6 py-2 text-white transition-colors hover:bg-blue-600"
           onClick={handleSave}
+          disabled={!!genreThumbnail && !isValidThumbnail}
         >
           Save
         </button>

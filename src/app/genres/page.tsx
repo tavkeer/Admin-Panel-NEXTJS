@@ -12,7 +12,7 @@ import ProtectedRoute from "@/components/ProtectedRoute/ProtectedRoute";
 type Genre = {
   id: string;
   name: string;
-  image?: string;
+  thumbnail_image?: string;
   product_ids: string[];
 };
 
@@ -46,7 +46,7 @@ export default function GenresPage() {
               const genre: Genre = {
                 id: doc.id,
                 name: doc.data().name,
-                image: doc.data().image,
+                thumbnail_image: doc.data().thumbnail_image,
                 product_ids: doc.data().product_ids || [],
               };
               return (
@@ -73,7 +73,7 @@ const GenreTile = ({
   genre: Genre;
   onClick: () => void;
 }) => {
-  const { name, image } = genre;
+  const { name, thumbnail_image } = genre;
 
   return (
     <div
@@ -81,9 +81,9 @@ const GenreTile = ({
       onClick={onClick}
     >
       <div className="h-56 w-full">
-        {image ? (
+        {thumbnail_image ? (
           <img
-            src={image}
+            src={thumbnail_image}
             alt={name}
             className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
           />
